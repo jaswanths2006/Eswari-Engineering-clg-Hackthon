@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %} · Login{% endblock %}
+{% block public %}
+<style>
+  .login-shell { min-height: 100vh; display: flex; align-items: center; padding: 32px 16px; }
+  .hero-title { font-size: clamp(2.4rem, 5vw, 3.6rem); line-height: 1.05; letter-spacing: -1.5px; }
+  .hero-title .glow { background: linear-gradient(90deg, var(--cyan), var(--violet), var(--pink)); background-size: 200% auto;
+    -webkit-background-clip: text; background-clip: text; color: transparent; animation: shine 6s linear infinite; filter: drop-shadow(0 0 18px rgba(0,240,255,.35)); }
+  @keyframes shine { to { background-position: 200% center; } }
+  .typing { font-family: "JetBrains Mono", monospace; color: var(--lime); font-size: .95rem; min-height: 1.4em; }
+  .typing::after { content: "▋"; animation: blink 1s steps(1) infinite; margin-left: 2px; }
+  .feature { display: flex; gap: 12px; align-items: flex-start; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--line);
+    background: rgba(255,255,255,.02); margin-bottom: 10px; transition: .2s; }
+  .feature:hover { border-color: rgba(255,43,214,.45); box-shadow: var(--glow-pink); transform: translateX(4px); }
+  .feature i { font-size: 1.2rem; color: var(--cyan); filter: drop-shadow(0 0 6px var(--cyan)); }
+  .login-card { position: relative; border-radius: 22px !important; padding: 2rem !important; }
+  .login-card::before { content: ""; position: absolute; inset: -1px; border-radius: 22px; padding: 1px; pointer-events: none;
+    background: linear-gradient(135deg, var(--cyan), transparent 40%, transparent 60%, var(--pink));
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; }
+  .tag { font-family: "JetBrains Mono", monospace; font-size: .72rem; color: var(--pink); letter-spacing: 2px; text-transform: uppercase; }
+  .stat-pill { font-family: "JetBrains Mono", monospace; font-size: .75rem; border: 1px solid var(--line); border-radius: 99px; padding: 4px 10px; color: #b9c3e6; }
+  .stat-pill b { color: var(--cyan); }
+</style>
+<div class="login-shell">
+  <div class="container">
+    <div class="row justify-content-center align-items-center g-5">
+      <div class="col-lg-6">
+        <div class="logo mb-4"><span class="mark"><i class="bi bi-mortarboard-fill"></i></span><span class="neon-text">CampusVerse</span></div>
+        <div class="tag mb-2">// intelligent campus platform</div>
+        <h1 class="hero-title fw-bold mb-3">One login.<br>Every role.<br><span class="glow">Whole campus.</span></h1>
+        <div class="typing mb-4" id="typing"></div>
+        <div class="feature"><i class="bi bi-robot"></i><div><b>Gemini AI assistant</b><div class="small text-body-secondary">Academics, note summaries, quizzes and issue reporting in plain language</div></div></div>
+        <div class="feature"><i class="bi bi-cpu"></i><div><b>CampusOps engine</b><div class="small text-body-secondary">AI triage, duplicate merging, SLA escalation and auto-assignment</div></div></div>
+        <div class="feature"><i class="bi bi-calendar2-check"></i><div><b>Rooms, parts &amp; approvals</b><div class="small text-body-secondary">Clash detection, stock reservation, separation of duties</div></div></div>
+        <div class="d-flex flex-wrap gap-2 mt-3">
+          <span class="stat-pill"><b>8</b> roles</span><span class="stat-pill"><b>20</b> subjects</span>
+          <span class="stat-pill"><b>20</b> rooms</span><span class="stat-pill"><b>live</b> SLA tracking</span>
+        </div>
+      </div>
+      <div class="col-lg-5 col-xl-4">
+        <div class="card login-card">
+          <div class="tag mb-1">secure access</div>
+          <h3 class="mb-4">Sign in</h3>
+          {% with msgs = get_flashed_messages(with_categories=true) %}
+            {% for cat, m in msgs %}<div class="alert alert-{{ cat }}">{{ m }}</div>{% endfor %}
+          {% endwith %}
+          <form method="post">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <label class="form-label small">Role</label>
+            <div class="input-group mb-3"><span class="input-group-text"><i class="bi bi-person-badge"></i></span>
+              <select name="role" class="form-select" id="roleSelect">
+                <optgroup label="Campus">
+                  {% for r in ['student','faculty','recruiter'] %}<option value="{{ r }}" {{ 'selected' if r == 'student' }}>{{ ROLE_LABELS[r] }}</option>{% endfor %}
+                </optgroup>
+                <optgroup label="CampusOps staff">
+                  {% for r in ['technician','dept_manager','facilities_admin','procurement','admin'] %}<option value="{{ r }}">{{ ROLE_LABELS[r] }}</option>{% endfor %}
+                </optgroup>
+              </select></div>
+            <label class="form-label small">Login ID</label>
+            <div class="input-group mb-3"><span class="input-group-text"><i class="bi bi-at"></i></span>
+              <input class="form-control" name="username" required placeholder="Roll no / Employee ID" autocomplete="username"></div>
+            <label class="form-label small">Password</label>
+            <div class="input-group mb-4"><span class="input-group-text"><i class="bi bi-shield-lock"></i></span>
+              <input class="form-control" type="password" name="password" required autocomplete="current-password"></div>
+            <button class="btn btn-primary w-100 py-2"><i class="bi bi-box-arrow-in-right"></i> Enter CampusVerse</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+  const lines = ["> triaging 'power failure in A-301'… P1 assigned", "> merging 5 Wi-Fi reports into 1 incident", "> relocating exam to B-301… done", "> reserving part, raising purchase approval", "> student asked: 'what's my attendance?'"];
+  let li = 0, ci = 0; const el = document.getElementById('typing');
+  (function type() {
+    const s = lines[li]; el.textContent = s.slice(0, ++ci);
+    if (ci > s.length) { setTimeout(() => { ci = 0; li = (li + 1) % lines.length; type(); }, 1600); return; }
+    setTimeout(type, 38);
+  })();
+</script>
+{% endblock %}

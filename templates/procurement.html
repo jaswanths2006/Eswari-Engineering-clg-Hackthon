@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% import "_ops.html" as ops with context %}
+{% block title %} · Procurement{% endblock %}
+{% block nav %}
+  <li><a class="nav-link" href="#approvals"><i class="bi bi-cart-check"></i> Purchase approvals</a></li>
+  <li><a class="nav-link" href="#orders"><i class="bi bi-truck"></i> Purchase orders</a></li>
+  <li><a class="nav-link" href="#inventory"><i class="bi bi-box-seam"></i> Inventory</a></li>
+{% endblock %}
+{% block content %}
+<div class="row g-3 mb-4">
+  {% set value = namespace(v=0) %}{% for i in inventory %}{% set value.v = value.v + i.stock * i.unit_cost %}{% endfor %}
+  <div class="col-6 col-lg-3"><div class="card p-3 stat"><div class="small text-body-secondary">Pending approvals</div><div class="val text-warning">{{ approvals|selectattr('can_decide')|list|length }}</div></div></div>
+  <div class="col-6 col-lg-3"><div class="card p-3 stat"><div class="small text-body-secondary">Orders in transit</div><div class="val">{{ orders|selectattr('status','equalto','Ordered')|list|length }}</div></div></div>
+  <div class="col-6 col-lg-3"><div class="card p-3 stat"><div class="small text-body-secondary">Out of stock</div><div class="val text-danger">{{ inventory|rejectattr('stock')|list|length }}</div></div></div>
+  <div class="col-6 col-lg-3"><div class="card p-3 stat"><div class="small text-body-secondary">Stock value</div>
+    <div class="val">₹{{ "{:,}".format(value.v) }}</div></div></div>
+</div>
+
+<section id="approvals" class="card p-3 mb-4">
+  <h5><i class="bi bi-cart-check"></i> Purchase approvals</h5>
+  <p class="small text-body-secondary">Raised automatically when a technician needs a part that is out of stock. Approval re-checks stock first; if it was replenished meanwhile, the order is not placed.</p>
+  {{ ops.approvals_list(approvals) }}
+  {% if decided %}<div class="small text-body-secondary mt-2">Recent: {% for a in decided %}#{{ a.id }} {{ a.item }} — {{ a.status }}{% if a.result %} ({{ a.result }}){% endif %}{{ '; ' if not loop.last }}{% endfor %}</div>{% endif %}
+</section>
+
+<section id="orders" class="card p-3 mb-4">
+  <h5><i class="bi bi-truck"></i> Purchase orders</h5>
+  <table class="table table-sm align-middle mb-0"><thead><tr><th>PO</th><th>Item</th><th>Qty</th><th>Amount</th><th>Status</th><th></th></tr></thead><tbody>
+  {% for po in orders %}
+    <tr><td>#{{ po.id }}</td><td>{{ po.item }}</td><td>{{ po.qty }}</td><td>₹{{ "{:,}".format(po.amount) }}</td>
+      <td><span class="badge {{ 'bg-success' if po.status == 'Received' else 'bg-warning text-dark' }}">{{ po.status }}</span></td>
+      <td>{% if po.status == 'Ordered' %}<form method="post" action="{{ url_for('ops.receive', po_id=po.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <button class="btn btn-sm btn-success">Mark delivered</button></form>{% endif %}</td></tr>
+  {% else %}<tr><td colspan="6" class="small text-body-secondary">No purchase orders yet.</td></tr>{% endfor %}</tbody></table>
+  <p class="small text-body-secondary mt-2 mb-0">Marking an order delivered adds stock and automatically resumes blocked work orders, highest priority first.</p>
+</section>
+
+<section id="inventory" class="card p-3 mb-4">
+  <h5><i class="bi bi-box-seam"></i> Inventory</h5>
+  {{ ops.inventory_table(inventory) }}
+</section>
+{% endblock %}

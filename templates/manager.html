@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% import "_ops.html" as ops with context %}
+{% block title %} · Department Manager{% endblock %}
+{% block nav %}
+  <li><a class="nav-link" href="#teaching"><i class="bi bi-person-video3"></i> Teaching assignments</a></li>
+  <li><a class="nav-link" href="#approvals"><i class="bi bi-check2-square"></i> Approvals <span class="badge bg-danger">{{ approvals|selectattr('can_decide')|list|length or '' }}</span></a></li>
+  <li><a class="nav-link" href="#queue"><i class="bi bi-list-ol"></i> {{ u.dept }} work orders</a></li>
+  <li><a class="nav-link" href="#bookings"><i class="bi bi-calendar-week"></i> Classes &amp; exams</a></li>
+  <li><a class="nav-link" href="#book"><i class="bi bi-calendar-plus"></i> Book a room</a></li>
+{% endblock %}
+{% block content %}
+<div class="row g-3 mb-4">
+  {% set breached = queue|selectattr('sla_state', 'equalto', 'Breached')|list|length %}
+  {% for label, val, cls in [('Open in ' ~ u.dept, queue|length, ''), ('P1 / P2', (queue|selectattr('priority','equalto','P1')|list|length) ~ ' / ' ~ (queue|selectattr('priority','equalto','P2')|list|length), 'text-danger'),
+      ('SLA breached', breached, 'text-danger'), ('Awaiting your approval', approvals|selectattr('can_decide')|list|length, 'text-warning')] %}
+    <div class="col-6 col-lg-3"><div class="card p-3 stat"><div class="small text-body-secondary">{{ label }}</div><div class="val {{ cls }}">{{ val }}</div></div></div>
+  {% endfor %}
+</div>
+
+<section id="teaching" class="card p-3 mb-4">
+  <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+    <h5 class="mb-0"><i class="bi bi-person-video3"></i> Teaching assignments &amp; course registration — {{ u.dept }}</h5>
+    <div class="d-flex gap-2">
+      <form method="post" action="{{ url_for('academics.auto_route') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <button class="btn btn-sm btn-outline-primary"><i class="bi bi-magic"></i> Auto-assign unstaffed</button></form>
+      <form method="post" action="{{ url_for('academics.registration_route') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <input type="hidden" name="open" value="{{ '0' if teaching.reg_open else '1' }}">
+        <button class="btn btn-sm {{ 'btn-outline-danger' if teaching.reg_open else 'btn-success' }}">{{ 'Close registration' if teaching.reg_open else 'Open registration' }}</button></form>
+    </div>
+  </div>
+  <p class="small text-body-secondary mt-1">You assign each subject to faculty. Only faculty with that subject in their expertise can be assigned, up to {{ teaching.max_credits }} credits each. Each faculty gets a section; students choose electives and the section (faculty) they want.
+    {% if teaching.pending_students %}<span class="text-warning-emphasis">{{ teaching.pending_students|length }} student(s) haven't chosen all {{ teaching.electives_required }} electives yet.</span>{% endif %}</p>
+  <div class="row g-3">
+    <div class="col-xl-8"><div class="table-responsive"><table class="table table-sm align-middle mb-0">
+      <thead><tr><th>Subject</th><th>Sections (faculty · enrolled/seats)</th><th style="min-width:230px">Add a section</th></tr></thead><tbody>
+      {% for s in teaching.subjects %}
+        <tr class="{{ 'table-warning' if not s.sections }}">
+          <td class="small"><b>{{ s.code }}</b> {{ s.name }}<br><span class="badge {{ 'bg-dark' if s.kind == 'core' else 'bg-info text-dark' }}">{{ s.kind }}</span> {{ s.credits }} cr</td>
+          <td class="small">{% for o in s.sections %}
+              <div class="d-flex align-items-center gap-1">Sec {{ o.section }} · <b>{{ o.faculty }}</b> · {{ o.enrolled }}/{{ o.capacity }}
+                <form method="post" action="{{ url_for('academics.remove_section_route', offering_id=o.id) }}" onsubmit="return confirm('Remove this section? Students move to another section.')">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="btn btn-link btn-sm p-0 text-danger" title="Remove section"><i class="bi bi-x-circle"></i></button></form></div>
+            {% else %}<span class="text-danger">Not staffed</span>{% endfor %}</td>
+          <td><form method="post" action="{{ url_for('academics.add_section_route') }}" class="input-group input-group-sm">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="subject_id" value="{{ s.id }}">
+              <select name="faculty_id" class="form-select">{% for f in teaching.faculty %}<option value="{{ f.id }}">{{ f.name }}{{ ' ✓' if s.code in (f.expertise or []) else ' (not qualified)' }}</option>{% endfor %}</select>
+              <input name="capacity" type="number" min="1" value="{{ 10 if s.kind == 'core' else 8 }}" class="form-control" style="max-width:60px" title="Seats">
+              <button class="btn btn-outline-dark">Add</button></form></td>
+        </tr>
+      {% endfor %}</tbody></table></div></div>
+    <div class="col-xl-4">
+      <h6 class="small">Faculty load</h6>
+      {% for f in teaching.faculty %}
+        <div class="small mb-2"><b>{{ f.name }}</b> <span class="text-body-secondary">({{ f.username }})</span>
+          <div class="progress" style="height:8px"><div class="progress-bar {{ 'bg-danger' if f.load >= teaching.max_credits else 'bg-success' }}" style="width: {{ (100 * f.load / teaching.max_credits)|round }}%"></div></div>
+          {{ f.load }}/{{ teaching.max_credits }} credits · expertise: {{ (f.expertise or [])|join(', ') }}</div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<section id="approvals" class="card p-3 mb-4">
+  <h5><i class="bi bi-check2-square"></i> Costly repair approvals</h5>
+  <p class="small text-body-secondary">Repairs above ₹10,000 in {{ u.dept }} buildings wait for you. Constraints are re-checked when you approve.</p>
+  {{ ops.approvals_list(approvals) }}
+  {% if decided %}<div class="small text-body-secondary mt-2">Your recent decisions: {% for a in decided %}#{{ a.id }} {{ a.status }}{{ ', ' if not loop.last }}{% endfor %}</div>{% endif %}
+</section>
+
+<section id="queue" class="card p-3 mb-4">
+  <h5><i class="bi bi-list-ol"></i> {{ u.dept }} work orders (priority order)</h5>
+  {{ ops.queue_table(queue) }}
+</section>
+
+<div class="row g-3">
+  <div class="col-lg-7">
+    <section id="bookings" class="card p-3 mb-4">
+      <h5><i class="bi bi-calendar-week"></i> {{ u.dept }} classes &amp; exams, next 7 days</h5>
+      <div class="table-responsive" style="max-height:420px"><table class="table table-sm mb-0">
+        <thead><tr><th>Date</th><th>Time</th><th>What</th><th>Room</th></tr></thead><tbody>
+        {% for b in bookings %}
+          <tr class="{{ 'table-warning' if b.from_code }} {{ 'table-danger' if b.conflict }}"><td class="small">{{ b.date[5:] }}</td><td class="small">{{ b.start }}–{{ b.end }}</td>
+            <td class="small">{% if b.kind == 'exam' %}<span class="badge bg-danger">EXAM</span> {% endif %}{{ b.title }}</td>
+            <td class="small">{% if b.from_code %}<s>{{ b.from_code }}</s> → {% endif %}<b>{{ b.room_code }}</b>{% if b.conflict %} <span class="text-danger">{{ b.conflict }}</span>{% endif %}</td></tr>
+        {% endfor %}</tbody></table></div>
+    </section>
+  </div>
+  <div class="col-lg-5">
+    <section id="book" class="card p-3 mb-4">
+      <h5><i class="bi bi-calendar-plus"></i> Book a room</h5>
+      {% include "_booking_form.html" %}
+    </section>
+  </div>
+</div>
+{% endblock %}

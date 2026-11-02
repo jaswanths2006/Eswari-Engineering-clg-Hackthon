@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block title %} · Integrations{% endblock %}
+{% block nav %}
+  <li><a class="nav-link" href="{{ url_for('ops.center') }}"><i class="bi bi-arrow-left"></i> Operations center</a></li>
+  <li><a class="nav-link" href="#email"><i class="bi bi-envelope-at"></i> Simulated email inbox</a></li>
+  <li><a class="nav-link" href="#sensor"><i class="bi bi-broadcast"></i> Sensor webhook</a></li>
+  <li><a class="nav-link" href="#outbox"><i class="bi bi-send"></i> Notification outbox</a></li>
+{% endblock %}
+{% block content %}
+<div class="row g-3">
+  <div class="col-lg-6">
+    <section id="email" class="card p-3 mb-4">
+      <h5><i class="bi bi-envelope-at"></i> Simulated email inbox</h5>
+      <p class="small text-body-secondary">Acts like an email provider calling <code>POST /api/inbound-email</code> with a shared secret. Sending the same Message-ID twice is ignored (idempotent). Reply with <code>[CO-xxxx]</code> in the subject to answer a clarification request.</p>
+      <form id="emailForm" class="vstack gap-2">
+        <div class="d-flex gap-2"><input name="from" class="form-control form-control-sm" value="22mec004@campus.edu" placeholder="From">
+          <input name="message_id" class="form-control form-control-sm" placeholder="Message-ID"></div>
+        <input name="subject" class="form-control form-control-sm" value="Water leaking from ceiling" placeholder="Subject">
+        <textarea name="body" rows="3" class="form-control form-control-sm">Hi, water is dripping from the ceiling in Classroom C-101 near the projector. Students moved to the back. Please help.</textarea>
+        <div class="d-flex gap-2"><button class="btn btn-sm btn-primary">Deliver email</button>
+          <button type="button" class="btn btn-sm btn-outline-secondary" onclick="redeliver('email')">Re-deliver same email</button></div>
+      </form>
+      <pre class="small bg-body-tertiary p-2 mt-2 mb-0" id="emailOut" style="white-space:pre-wrap"></pre>
+    </section>
+    <section id="sensor" class="card p-3 mb-4">
+      <h5><i class="bi bi-broadcast"></i> Sensor webhook</h5>
+      <p class="small text-body-secondary">A building-management system calling <code>POST /api/webhook/sensor</code>. The same event_id is processed once.</p>
+      <form id="sensorForm" class="vstack gap-2">
+        <div class="d-flex gap-2">
+          <select name="room_code" class="form-select form-select-sm">{% for r in rooms %}<option {{ 'selected' if r.code == 'L-101' }}>{{ r.code }}</option>{% endfor %}</select>
+          <select name="category" class="form-select form-select-sm"><option>HVAC</option><option>Electrical</option><option>Plumbing</option><option>Network</option></select>
+          <input name="event_id" class="form-control form-control-sm" placeholder="event_id">
+        </div>
+        <input name="message" class="form-control form-control-sm" value="Temperature above safe limit, precision AC not responding">
+        <input name="reading" class="form-control form-control-sm" value="34.5°C">
+        <div class="d-flex gap-2"><button class="btn btn-sm btn-primary">Send event</button>
+          <button type="button" class="btn btn-sm btn-outline-secondary" onclick="redeliver('sensor')">Re-send same event</button></div>
+      </form>
+      <pre class="small bg-body-tertiary p-2 mt-2 mb-0" id="sensorOut" style="white-space:pre-wrap"></pre>
+    </section>
+  </div>
+  <div class="col-lg-6">
+    <section id="outbox" class="card p-3 mb-4">
+      <h5><i class="bi bi-send"></i> Notification service outbox (simulated email)</h5>
+      <p class="small text-body-secondary">Targeted emails the platform sent: acknowledgements, clarification requests, room changes, escalations and approval requests.</p>
+      {% for m in outbox %}
+        <div class="border-bottom py-2 small"><b>{{ m.subject }}</b> <span class="text-body-secondary">→ {{ m.to }} · {{ m.at }}</span>
+          <div style="white-space:pre-wrap">{{ m.body }}</div></div>
+      {% else %}<p class="small text-body-secondary">No emails sent yet.</p>{% endfor %}
+    </section>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+  const SECRET = {{ secret|tojson }}, last = {};
+  const rid = p => p + '-' + Math.random().toString(36).slice(2, 10);
+  async function deliver(kind, payload) {
+    const url = kind === 'email' ? '/api/inbound-email' : '/api/webhook/sensor';
+    const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Webhook-Secret': SECRET }, body: JSON.stringify(payload) });
+    document.getElementById(kind + 'Out').textContent = `HTTP ${r.status}\n` + JSON.stringify(await r.json(), null, 2);
+  }
+  function submitForm(kind, form, idField) {
+    const data = Object.fromEntries(new FormData(form));
+    if (!data[idField]) data[idField] = rid(kind === 'email' ? 'msg' : 'evt');
+    form[idField].value = data[idField];
+    last[kind] = data; deliver(kind, data);
+  }
+  emailForm.addEventListener('submit', e => { e.preventDefault(); emailForm.message_id.value = ''; submitForm('email', emailForm, 'message_id'); });
+  sensorForm.addEventListener('submit', e => { e.preventDefault(); sensorForm.event_id.value = ''; submitForm('sensor', sensorForm, 'event_id'); });
+  function redeliver(kind) { if (last[kind]) deliver(kind, last[kind]); else alert('Send one first.'); }
+</script>
+{% endblock %}

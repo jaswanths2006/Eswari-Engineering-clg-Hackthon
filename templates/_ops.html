@@ -1,0 +1,114 @@
+{# Shared CampusOps building blocks. Import with: {% import "_ops.html" as ops with context %} #}
+
+{% macro pbadge(p) -%}
+  <span class="badge {{ {'P1':'bg-danger','P2':'bg-warning text-dark','P3':'bg-info text-dark','P4':'bg-secondary'}[p] }}">{{ p }}</span>
+{%- endmacro %}
+
+{% macro sbadge(s) -%}
+  <span class="badge {{ {'Needs Info':'bg-warning text-dark','Blocked':'bg-danger','Resolved':'bg-success','Closed':'bg-success','Duplicate':'bg-secondary','In Progress':'bg-primary','Assigned':'bg-info text-dark','Triaged':'bg-light text-dark border','New':'bg-light text-dark border'}.get(s, 'bg-secondary') }}">{{ s }}</span>
+{%- endmacro %}
+
+{% macro slabadge(t) -%}
+  {% if t.sla_due and t.status not in ['Resolved','Closed','Duplicate','Needs Info'] %}
+    <span class="badge {{ {'Breached':'bg-danger','At risk':'bg-warning text-dark'}.get(t.sla_state, 'bg-success-subtle text-success-emphasis') }}" title="SLA due {{ t.sla_due }}">
+      {{ t.sla_state or 'On track' }} · due {{ t.sla_due[5:] }}</span>
+    {% if t.escalation_level %}<span class="badge bg-dark">Escalated L{{ t.escalation_level }}</span>{% endif %}
+  {% endif %}
+{%- endmacro %}
+
+{% macro queue_table(items, show_actions=False, techs=None, inventory=None, compact=False) %}
+<div class="table-responsive"><table class="table table-sm align-middle mb-0">
+  <thead><tr><th>#</th><th>Pri</th><th>Issue</th><th>Where</th><th>Status</th>{% if not compact %}<th>Owner</th><th>SLA</th>{% endif %}{% if show_actions %}<th style="min-width:230px">Actions</th>{% endif %}</tr></thead>
+  <tbody>
+  {% for t in items %}
+    <tr class="{{ 'table-danger' if t.priority == 'P1' and t.status not in ['Resolved','Closed'] }}">
+      <td class="small text-nowrap"><b>{{ t.ref }}</b><div class="text-body-secondary" style="font-size:.7rem">{{ t.source }}{% if t.report_count > 1 %} · {{ t.report_count }} reports{% endif %}</div></td>
+      <td>{{ pbadge(t.priority) }}<div class="text-body-secondary" style="font-size:.7rem">score {{ t.priority_score }}</div></td>
+      <td class="small" style="max-width:320px">
+        <b>{{ t.title }}</b> <span class="badge bg-light text-dark border">{{ t.category }}</span>
+        {% if t.group_id %}<span class="badge bg-dark" title="Linked incident">🔗 #{{ t.group_id }}</span>{% endif %}
+        {% if t.safety %}<span class="badge bg-danger">safety</span>{% endif %}
+        <div class="text-body-secondary">Severity {{ t.severity }}/5 · {{ t.severity_reason }}</div>
+        {% if t.blocked_reason %}<div class="text-danger"><i class="bi bi-slash-circle"></i> {{ t.blocked_reason }}</div>{% endif %}
+        {% if t.parts %}<div>{% for p in t.parts %}<span class="badge {{ 'bg-success' if p.status in ['Reserved','Used'] else 'bg-danger' }}">{{ p.qty }}× {{ p.name }}: {{ p.status }}</span> {% endfor %}</div>{% endif %}
+        {% if t.affected_bookings %}<div class="text-warning-emphasis">{{ t.affected_bookings|length }} booking(s) relocated</div>{% endif %}
+      </td>
+      <td class="small">{{ t.room_code or '—' }}<div class="text-body-secondary" style="font-size:.7rem">{{ t.location_text }}</div></td>
+      <td>{{ sbadge(t.status) }}</td>
+      {% if not compact %}<td class="small">{{ t.tech_name or '—' }}</td><td>{{ slabadge(t) }}</td>{% endif %}
+      {% if show_actions %}<td>{{ actions(t, techs, inventory) }}</td>{% endif %}
+    </tr>
+  {% else %}<tr><td colspan="8" class="text-body-secondary small">Nothing in the queue. 🎉</td></tr>{% endfor %}
+  </tbody>
+</table></div>
+{% endmacro %}
+
+{% macro form_open(t) -%}
+<form method="post" action="{{ url_for('ops.ticket_action', tid=t.id) }}" class="d-inline"><input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+{%- endmacro %}
+
+{% macro actions(t, techs=None, inventory=None) %}
+<div class="d-flex flex-wrap gap-1">
+  {% if t.status == 'Assigned' %}{{ form_open(t) }}<button name="action" value="start" class="btn btn-sm btn-primary">Start</button></form>{% endif %}
+  {% if t.status == 'In Progress' %}{{ form_open(t) }}<input type="hidden" name="note" value=""><button name="action" value="resolve" class="btn btn-sm btn-success">Resolve</button></form>{% endif %}
+  {% if t.status == 'Resolved' and u.role in ['facilities_admin','admin'] %}{{ form_open(t) }}<button name="action" value="close" class="btn btn-sm btn-outline-success">Close</button></form>{% endif %}
+  {% if t.status == 'Resolved' %}{{ form_open(t) }}<button name="action" value="reopen" class="btn btn-sm btn-outline-danger">Reopen</button></form>{% endif %}
+  {% if t.status in ['Triaged'] and u.role in ['facilities_admin','admin'] %}{{ form_open(t) }}<button name="action" value="auto" class="btn btn-sm btn-outline-primary">Auto-assign</button></form>{% endif %}
+</div>
+{% if t.status in ['Assigned','In Progress','Blocked'] and inventory %}
+  {{ form_open(t) }}<div class="input-group input-group-sm mt-1">
+    <select name="item_id" class="form-select">{% for i in inventory %}<option value="{{ i.id }}">{{ i.name }} ({{ i.stock - i.reserved }} free)</option>{% endfor %}</select>
+    <input name="qty" type="number" value="1" min="1" class="form-control" style="max-width:55px">
+    <button name="action" value="part" class="btn btn-outline-secondary">Reserve</button></div></form>
+  {{ form_open(t) }}<div class="input-group input-group-sm mt-1">
+    <span class="input-group-text">₹</span><input name="amount" type="number" min="0" class="form-control" placeholder="Repair cost" value="{{ t.cost_estimate or '' }}">
+    <button name="action" value="cost" class="btn btn-outline-secondary">Set cost</button></div></form>
+{% endif %}
+{% if techs and t.status in ['Triaged','Assigned','In Progress','Blocked'] %}
+  {{ form_open(t) }}<div class="input-group input-group-sm mt-1">
+    <select name="tech_id" class="form-select">{% for x in techs %}<option value="{{ x.id }}" {{ 'selected' if x.id == t.assigned_to }}>{{ x.name.split()[0] }} ({{ x.skills|join('/') }}{{ ', off' if not x.available }})</option>{% endfor %}</select>
+    <button name="action" value="assign" class="btn btn-outline-dark">Reassign</button></div></form>
+{% endif %}
+{% endmacro %}
+
+{% macro approvals_list(items) %}
+{% for a in items %}
+  <div class="border rounded p-2 mb-2 small">
+    <div class="d-flex justify-content-between gap-2">
+      <b>#{{ a.id }} {{ {'purchase':'🛒 Purchase','costly_repair':'💰 Costly repair','override':'⚖️ Override'}[a.type] }}{% if a.kind %} ({{ a.kind }}){% endif %}</b>
+      {% if a.amount %}<span class="badge bg-warning text-dark">₹{{ "{:,}".format(a.amount) }}</span>{% endif %}
+    </div>
+    <div>{% if a.type == 'purchase' %}{{ a.qty }} × {{ a.item }} — {% endif %}{% if a.kind == 'booking' %}{{ a.room_code }} on {{ a.date }} {{ a.start }}-{{ a.end }}: "{{ a.title }}" — {% endif %}{{ a.reason }}</div>
+    <div class="text-body-secondary">Requested by {{ a.requested_name }} · {{ a.created }}</div>
+    {% if a.can_decide %}
+      <form method="post" action="{{ url_for('ops.approval', aid=a.id) }}" class="input-group input-group-sm mt-1">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <input name="note" class="form-control" placeholder="Note (optional)">
+        <button name="decision" value="approve" class="btn btn-success">Approve</button>
+        <button name="decision" value="reject" class="btn btn-outline-danger">Reject</button>
+      </form>
+    {% else %}<div class="text-danger mt-1"><i class="bi bi-lock"></i> {{ a.why_not }}</div>{% endif %}
+  </div>
+{% else %}<p class="small text-body-secondary mb-0">No pending approvals.</p>{% endfor %}
+{% endmacro %}
+
+{% macro inventory_table(items) %}
+<div class="table-responsive"><table class="table table-sm mb-0">
+  <thead><tr><th>Part</th><th>Stock</th><th>Reserved</th><th>Free</th><th>On order</th><th>Reorder at</th><th>Unit ₹</th></tr></thead>
+  <tbody>{% for i in items %}{% set free = i.stock - i.reserved %}
+    <tr class="{{ 'table-danger' if free <= 0 else 'table-warning' if free <= i.reorder_level }}"><td>{{ i.name }}</td><td>{{ i.stock }}</td><td>{{ i.reserved }}</td>
+      <td><b>{{ free }}</b></td><td>{{ i.on_order }}</td><td>{{ i.reorder_level }}</td><td>{{ "{:,}".format(i.unit_cost) }}</td></tr>{% endfor %}</tbody>
+</table></div>
+{% endmacro %}
+
+{% macro report_form(rooms, categories, compact=False) %}
+<form method="post" action="{{ url_for('ops.report') }}" class="vstack gap-2">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  <textarea name="description" class="form-control form-control-sm" rows="2" required placeholder="Describe the problem in your own words, e.g. 'Projector in A-102 keeps switching off during lectures'"></textarea>
+  <div class="d-flex gap-2">
+    <select name="room_code" class="form-select form-select-sm"><option value="">Location (AI will detect it)</option>{% for r in rooms %}<option value="{{ r.code }}">{{ r.code }} · {{ r.name }}</option>{% endfor %}</select>
+    <select name="category" class="form-select form-select-sm"><option value="">Type (AI will detect it)</option>{% for c in categories %}<option>{{ c }}</option>{% endfor %}</select>
+  </div>
+  <button class="btn btn-sm btn-dark"><i class="bi bi-send"></i> Submit report</button>
+</form>
+{% endmacro %}

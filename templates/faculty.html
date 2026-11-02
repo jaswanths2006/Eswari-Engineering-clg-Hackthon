@@ -1,0 +1,197 @@
+{% extends "base.html" %}
+{% block title %} · Faculty{% endblock %}
+{% block nav %}
+  <li><a class="nav-link" href="#attendance"><i class="bi bi-calendar-check"></i> Take attendance</a></li>
+  <li><a class="nav-link" href="#weak"><i class="bi bi-exclamation-triangle"></i> At-risk students</a></li>
+  <li><a class="nav-link" href="#leaves"><i class="bi bi-envelope-paper"></i> Leave requests</a></li>
+  <li><a class="nav-link" href="#quizzes"><i class="bi bi-patch-check"></i> AI quiz results</a></li>
+  <li><a class="nav-link" href="#teaching"><i class="bi bi-person-video3"></i> My teaching</a></li>
+  <li><a class="nav-link" href="#requests"><i class="bi bi-person-plus"></i> Student requests {% if reqs.pending %}<span class="badge bg-warning ms-1">{{ reqs.pending|length }}</span>{% endif %}</a></li>
+  <li><a class="nav-link" href="#upload"><i class="bi bi-upload"></i> Marks / notes / tasks</a></li>
+  <li><a class="nav-link" href="#classes"><i class="bi bi-calendar-week"></i> My classes &amp; rooms</a></li>
+  <li><a class="nav-link" href="#book"><i class="bi bi-calendar-plus"></i> Book a room</a></li>
+  <li><a class="nav-link" href="#report"><i class="bi bi-tools"></i> Report an issue</a></li>
+  <li><a class="nav-link" href="#notices"><i class="bi bi-megaphone"></i> Notices</a></li>
+{% endblock %}
+{% block content %}
+<div class="row g-3 mb-4">
+  <div class="col-6 col-lg-3"><div class="card p-3 stat"><div class="small text-body-secondary">My subjects</div><div class="val">{{ subjects|length }}</div></div></div>
+  <div class="col-6 col-lg-3"><div class="card p-3 stat"><div class="small text-body-secondary">Students</div><div class="val">{{ students|length }}</div></div></div>
+  <div class="col-6 col-lg-3"><div class="card p-3 stat"><div class="small text-body-secondary">At-risk</div><div class="val text-danger">{{ weak|length }}</div></div></div>
+  <div class="col-6 col-lg-3"><div class="card p-3 stat"><div class="small text-body-secondary">Pending leaves</div><div class="val">{{ leaves|length }}</div></div></div>
+</div>
+<section id="teaching" class="card p-3 mb-4">
+  <h5><i class="bi bi-person-video3"></i> My teaching (assigned by your HOD)</h5>
+  <div class="table-responsive"><table class="table table-sm mb-0">
+    <thead><tr><th>Subject</th><th>Type</th><th>Section</th><th>Students</th><th>Credits</th></tr></thead><tbody>
+    {% for o in my_sections %}<tr><td><b>{{ o.code }}</b> {{ o.subject }}</td><td><span class="badge {{ 'bg-dark' if o.kind == 'core' else 'bg-info text-dark' }}">{{ o.kind }}</span></td>
+      <td>{{ o.section }}</td><td>{{ o.enrolled }}/{{ o.capacity }}</td><td>{{ o.credits }}</td></tr>
+    {% else %}<tr><td colspan="5" class="small text-body-secondary">No subjects assigned yet.</td></tr>{% endfor %}
+  </tbody></table></div>
+  <div class="small text-body-secondary mt-1">Total load: {{ my_sections|sum(attribute='credits') }} credits · Expertise: {{ (u.expertise or [])|join(', ') }}</div>
+</section>
+<section id="requests" class="card p-3 mb-4">
+  <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+    <h5 class="mb-0"><i class="bi bi-person-plus"></i> Student requests <span class="badge bg-warning">{{ reqs.pending|length }} pending</span></h5>
+    {% if reqs.pending %}<form method="post" action="{{ url_for('academics.accept_all_route') }}" onsubmit="return confirm('Accept all pending requests while seats last?')">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="btn btn-sm btn-outline-success"><i class="bi bi-check2-all"></i> Accept all (seats permitting)</button></form>{% endif %}
+  </div>
+  <p class="small text-body-secondary mt-1">Students who want to join one of your sections. Accepting takes a seat and enrolls them (or moves them from another faculty's section). Rejecting sends them your reason.</p>
+  {% for r in reqs.pending %}
+    <div class="border rounded p-3 mb-2">
+      <div class="d-flex justify-content-between flex-wrap gap-2">
+        <div><b>{{ r.student_name }}</b> <span class="mono small">{{ r.roll }}</span> · CGPA {{ r.cgpa }}
+          <div class="small">wants <b>{{ r.code }} {{ r.subject }}</b> · your section {{ r.section }}
+            {% if r.is_switch %}<span class="badge bg-info">switch from {{ r.from_faculty or 'another section' }}</span>{% else %}<span class="badge bg-primary">new {{ r.kind }}</span>{% endif %}</div>
+          {% if r.note %}<div class="small text-body-secondary"><i class="bi bi-chat-quote"></i> "{{ r.note }}"</div>{% endif %}
+        </div>
+        <div class="text-end small"><span class="{{ 'text-danger' if r.seats_left <= 0 else 'text-success' }}">{{ r.seats_left }} seat(s) free</span><div class="mono text-body-secondary">{{ r.created }}</div></div>
+      </div>
+      <form method="post" action="{{ url_for('academics.decide_route', request_id=r.id) }}" class="input-group input-group-sm mt-2">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <input name="reason" class="form-control" placeholder="Message to the student (e.g. 'Welcome!' or 'Section reserved for lab batch 2')">
+        <button name="decision" value="accept" class="btn btn-success"><i class="bi bi-check-lg"></i> Accept</button>
+        <button name="decision" value="reject" class="btn btn-outline-danger"><i class="bi bi-x-lg"></i> Reject</button>
+      </form>
+    </div>
+  {% else %}<p class="small text-body-secondary">No pending requests. 🎉</p>{% endfor %}
+  {% if reqs.history %}
+    <h6 class="mt-3 small">Recent decisions</h6>
+    {% for r in reqs.history %}<div class="small border-bottom py-1"><span class="badge {{ 'bg-success' if r.status == 'Accepted' else 'bg-danger' }}">{{ r.status }}</span>
+      {{ r.roll }} {{ r.student_name }} → {{ r.code }} sec {{ r.section }}{% if r.reason %} · {{ r.reason }}{% endif %}</div>{% endfor %}
+  {% endif %}
+</section>
+<div>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-6">
+    <section id="attendance" class="card p-3 mb-4">
+      <h5><i class="bi bi-calendar-check"></i> Take attendance</h5>
+      <form method="post" action="{{ url_for('faculty_attendance') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <div class="row g-2 mb-2">
+          <div class="col-7"><select name="subject_id" class="form-select">{% for s in subjects %}<option value="{{ s.id }}">{{ s.code }} · {{ s.name }}</option>{% endfor %}</select></div>
+          <div class="col-5"><input type="date" name="date" value="{{ today }}" class="form-control"></div>
+        </div>
+        {% for st in students %}
+          <div class="form-check"><input class="form-check-input" type="checkbox" name="present" value="{{ st.id }}" id="p{{ st.id }}" checked>
+            <label class="form-check-label" for="p{{ st.id }}">{{ st.roll }} — {{ st.name }}</label></div>
+        {% endfor %}
+        <button class="btn btn-primary btn-sm mt-2">Save attendance (+5 XP each present)</button>
+      </form>
+    </section>
+  </div>
+  <div class="col-lg-6">
+    <section id="weak" class="card p-3 mb-4">
+      <h5><i class="bi bi-exclamation-triangle text-danger"></i> At-risk students</h5>
+      <p class="small text-body-secondary">Attendance below 75% or average marks below 50%.</p>
+      <table class="table table-sm mb-0"><thead><tr><th>Roll</th><th>Name</th><th>Att.</th><th>Avg</th></tr></thead><tbody>
+        {% for w in weak %}<tr><td>{{ w.roll }}</td><td>{{ w.name }}</td>
+          <td class="{{ 'text-danger' if w.att < 75 else '' }}">{{ w.att }}%</td><td class="{{ 'text-danger' if w.avg < 50 else '' }}">{{ w.avg }}%</td></tr>
+        {% else %}<tr><td colspan="4" class="text-success">Everyone is on track 🎉</td></tr>{% endfor %}
+      </tbody></table>
+    </section>
+    <section id="leaves" class="card p-3 mb-4">
+      <h5><i class="bi bi-envelope-paper"></i> Leave requests</h5>
+      {% for l in leaves %}
+        <div class="d-flex justify-content-between align-items-center border-bottom py-2 small">
+          <span><b>{{ l.roll }}</b> {{ l.name }}<br>{{ l.from_date }} → {{ l.to_date }} · {{ l.reason }}</span>
+          <span class="d-flex gap-1">
+            {% for act, cls in [('approve','success'),('reject','danger')] %}
+            <form method="post" action="{{ url_for('faculty_leave', leave_id=l.id, action=act) }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="btn btn-sm btn-{{ cls }}">{{ act|capitalize }}</button></form>
+            {% endfor %}
+          </span>
+        </div>
+      {% else %}<p class="small text-body-secondary mb-0">No pending requests.</p>{% endfor %}
+    </section>
+  </div>
+</div>
+
+<section id="quizzes" class="card p-3 mb-4">
+  <h5><i class="bi bi-patch-check"></i> AI quiz results <span class="badge bg-secondary">only you see these</span></h5>
+  <p class="small text-body-secondary">Students take AI-generated quizzes on the notes you share. Scores are sent only to you.</p>
+  <div class="table-responsive"><table class="table table-sm mb-0">
+    <thead><tr><th>Student</th><th>Note</th><th>Score</th><th>Taken</th></tr></thead><tbody>
+    {% for q in quiz_results %}
+      {% set p = (100 * q.score / q.total)|round|int %}
+      <tr><td>{{ q.roll }} — {{ q.name }}</td><td><b>{{ q.code }}</b> {{ q.title }}</td>
+        <td><span class="badge {{ 'bg-success' if p >= 60 else 'bg-danger' }}">{{ q.score }}/{{ q.total }} ({{ p }}%)</span></td><td class="small">{{ q.taken_at }}</td></tr>
+    {% else %}<tr><td colspan="4" class="text-body-secondary">No quizzes taken yet.</td></tr>{% endfor %}
+  </tbody></table></div>
+</section>
+
+<section id="upload" class="row g-3">
+  <div class="col-lg-4"><div class="card p-3 mb-4">
+    <h6><i class="bi bi-123"></i> Upload marks</h6>
+    <form method="post" action="{{ url_for('faculty_marks') }}" class="vstack gap-2">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <select name="subject_id" class="form-select form-select-sm">{% for s in subjects %}<option value="{{ s.id }}">{{ s.code }}</option>{% endfor %}</select>
+      <select name="student_id" class="form-select form-select-sm">{% for st in students %}<option value="{{ st.id }}">{{ st.roll }} — {{ st.name }}</option>{% endfor %}</select>
+      <input name="exam" class="form-control form-control-sm" placeholder="Exam (e.g. Quiz-1)" required>
+      <div class="input-group input-group-sm"><input name="score" type="number" step="0.5" class="form-control" placeholder="Score" required>
+        <input name="max_score" type="number" class="form-control" placeholder="Max" value="30" required></div>
+      <button class="btn btn-primary btn-sm">Upload</button>
+    </form>
+  </div></div>
+  <div class="col-lg-4"><div class="card p-3 mb-4">
+    <h6><i class="bi bi-folder-plus"></i> Share notes <span class="badge bg-primary-subtle text-primary-emphasis">AI summary + quiz</span></h6>
+    <form method="post" action="{{ url_for('faculty_note') }}" enctype="multipart/form-data" class="vstack gap-2">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <select name="subject_id" class="form-select form-select-sm">{% for s in subjects %}<option value="{{ s.id }}">{{ s.code }}</option>{% endfor %}</select>
+      <input name="title" class="form-control form-control-sm" placeholder="Title, e.g. Unit 3 - Normalization" required>
+      <input name="file" type="file" accept=".pdf,.txt" class="form-control form-control-sm">
+      <textarea name="content" class="form-control form-control-sm" rows="3" placeholder="…or paste the note text"></textarea>
+      <button class="btn btn-primary btn-sm">Share</button>
+    </form>
+    {% if my_notes %}<div class="small text-body-secondary mt-2">Shared: {% for n in my_notes %}{{ n.code }} {{ n.title }}{{ ', ' if not loop.last }}{% endfor %}</div>{% endif %}
+  </div></div>
+  <div class="col-lg-4"><div class="card p-3 mb-4">
+    <h6><i class="bi bi-journal-plus"></i> Post assignment</h6>
+    <form method="post" action="{{ url_for('faculty_assignment') }}" enctype="multipart/form-data" class="vstack gap-2">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <select name="subject_id" class="form-select form-select-sm">{% for s in subjects %}<option value="{{ s.id }}">{{ s.code }}</option>{% endfor %}</select>
+      <input name="title" class="form-control form-control-sm" placeholder="Title" required>
+      <input name="file" type="file" accept=".pdf,.txt" class="form-control form-control-sm">
+      <textarea name="content" class="form-control form-control-sm" rows="2" placeholder="…or type the instructions"></textarea>
+      <input name="due" type="date" class="form-control form-control-sm" required>
+      <button class="btn btn-primary btn-sm">Post</button>
+    </form>
+  </div></div>
+</section>
+{% import "_ops.html" as ops with context %}
+<div class="row g-3">
+  <div class="col-lg-7">
+    <section id="classes" class="card p-3 mb-4">
+      <h5><i class="bi bi-calendar-week"></i> My classes &amp; exams, next 7 days</h5>
+      <p class="small text-body-secondary">If a room becomes unavailable, CampusOps moves your class to the best free room automatically and notifies you.</p>
+      <div class="table-responsive" style="max-height:360px"><table class="table table-sm mb-0"><tbody>
+      {% for b in my_bookings %}
+        <tr class="{{ 'table-warning' if b.from_code }} {{ 'table-danger' if b.conflict }}"><td class="small text-nowrap">{{ b.date[5:] }} {{ b.start }}–{{ b.end }}</td>
+          <td class="small">{% if b.kind == 'exam' %}<span class="badge bg-danger">EXAM</span> {% endif %}{{ b.title }}</td>
+          <td class="small text-nowrap">{% if b.from_code %}<s>{{ b.from_code }}</s> → {% endif %}<b>{{ b.room_code }}</b>
+            {% if b.from_code %}<div class="text-warning-emphasis" style="font-size:.7rem">{{ b.relocation_reason }}</div>{% endif %}
+            {% if b.conflict %}<div class="text-danger" style="font-size:.7rem">{{ b.conflict }}</div>{% endif %}</td></tr>
+      {% else %}<tr><td class="small text-body-secondary">No classes this week.</td></tr>{% endfor %}
+      </tbody></table></div>
+    </section>
+  </div>
+  <div class="col-lg-5">
+    <section id="book" class="card p-3 mb-4">
+      <h5><i class="bi bi-calendar-plus"></i> Book a room</h5>
+      <p class="small text-body-secondary">Double bookings are blocked; free alternatives are suggested. You can request an override for a specific room (needs Facilities approval).</p>
+      {% include "_booking_form.html" %}
+      {% if my_requests %}<div class="small mt-2">{% for a in my_requests %}<div>#{{ a.id }} {{ a.kind or a.type }} {{ a.room_code or '' }} {{ a.date or '' }} — <b>{{ a.status }}</b>{% if a.result %}: {{ a.result }}{% endif %}</div>{% endfor %}</div>{% endif %}
+    </section>
+  </div>
+</div>
+<section id="report" class="card p-3 mb-4">
+  <h5><i class="bi bi-tools"></i> Report an issue</h5>
+  <div class="row g-3">
+    <div class="col-lg-5">{{ ops.report_form(rooms, categories) }}</div>
+    <div class="col-lg-7">{{ ops.queue_table(my_reports, compact=True) }}</div>
+  </div>
+</section>
+{% include "_notices.html" %}
+{% endblock %}

@@ -1,0 +1,1063 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CampusVerse</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+<style>
+/* ================= THEME ================= */
+:root {
+  --brand: #4f46e5; --brand2: #06b6d4;
+  --bg: #f4f6fb; --card: #ffffff; --text: #1f2937; --muted: #6b7280; --border: #e5e7eb; --soft: #f1f5f9;
+  --ok: #16a34a; --bad: #dc2626; --warn: #f59e0b;
+  --radius: 14px; --shadow: 0 1px 3px rgba(0,0,0,.08);
+}
+[data-theme="dark"] {
+  --bg: #0f172a; --card: #1e293b; --text: #e2e8f0; --muted: #94a3b8; --border: #334155; --soft: #0f172a;
+}
+* { box-sizing: border-box; }
+body { margin: 0; font-family: "Segoe UI", system-ui, sans-serif; background: var(--bg); color: var(--text); }
+a { color: inherit; text-decoration: none; }
+.grad, .card.grad { background: linear-gradient(135deg, var(--brand), var(--brand2)); color: #fff; }
+.muted { color: var(--muted); font-size: .85rem; }
+.ok { color: var(--ok); } .bad { color: var(--bad); }
+
+/* ================= LOGIN ================= */
+.login-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; gap: 48px; padding: 24px; flex-wrap: wrap; }
+.hero { max-width: 420px; }
+.hero h1 { font-size: 2.6rem; margin: 0 0 8px; }
+.hero li { list-style: none; margin: 6px 0; opacity: .92; }
+.login-card { background: var(--card); color: var(--text); padding: 28px; border-radius: var(--radius); width: 100%; max-width: 420px; box-shadow: 0 20px 40px rgba(0,0,0,.2); }
+.roles { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-bottom: 16px; }
+.role-btn { border: 1.5px solid var(--border); background: none; color: var(--text); border-radius: 10px; padding: 10px 2px; cursor: pointer; font-size: .72rem; }
+.role-btn i { display: block; font-size: 1.25rem; margin-bottom: 2px; }
+.role-btn.active { border-color: var(--brand); background: var(--brand); color: #fff; }
+
+/* ================= FORMS ================= */
+label { font-size: .8rem; color: var(--muted); display: block; margin: 8px 0 4px; }
+input, select, textarea { width: 100%; padding: 9px 11px; border: 1px solid var(--border); border-radius: 8px; background: var(--card); color: var(--text); font: inherit; }
+.btn { border: 0; border-radius: 8px; padding: 9px 14px; cursor: pointer; font: inherit; font-weight: 600; background: var(--brand); color: #fff; display: inline-flex; align-items: center; gap: 6px; justify-content: center; }
+.btn:hover { filter: brightness(1.1); }
+.btn:disabled { opacity: .6; cursor: default; }
+.btn.sm { padding: 5px 10px; font-size: .8rem; }
+.btn.ghost { background: none; color: var(--text); border: 1px solid var(--border); }
+.btn.outline { background: none; color: var(--brand); border: 1px solid var(--brand); }
+.btn.green { background: var(--ok); } .btn.red { background: var(--bad); } .btn.dark { background: #111827; } .btn.wa { background: #25d366; }
+.btn.full { width: 100%; margin-top: 14px; }
+.row { display: flex; gap: 8px; flex-wrap: wrap; align-items: end; }
+.row > * { flex: 1; min-width: 110px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
+.chip { border: 1px solid var(--brand); color: var(--brand); background: none; border-radius: 99px; padding: 4px 10px; font-size: .78rem; cursor: pointer; }
+
+/* ================= LAYOUT ================= */
+.app { display: flex; min-height: 100vh; }
+.sidebar { width: 235px; background: var(--card); border-right: 1px solid var(--border); padding: 18px; position: sticky; top: 0; height: 100vh; overflow-y: auto; flex-shrink: 0; }
+.sidebar .logo { font-weight: 700; font-size: 1.2rem; }
+.sidebar nav a { display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; border-radius: 8px; margin: 2px 0; font-size: .9rem; }
+.sidebar nav a:hover { background: var(--bg); }
+main { flex: 1; padding: 24px; min-width: 0; }
+.topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; gap: 10px; flex-wrap: wrap; }
+.topbar h2 { margin: 0; font-size: 1.4rem; }
+.badge { display: inline-block; padding: 2px 9px; border-radius: 99px; font-size: .75rem; font-weight: 600; background: #e0e7ff; color: #3730a3; white-space: nowrap; }
+.badge.ok { background: #dcfce7; color: #166534; } .badge.bad { background: #fee2e2; color: #991b1b; }
+.badge.warn { background: #fef3c7; color: #92400e; } .badge.grey { background: #e5e7eb; color: #374151; }
+
+.grid { display: grid; gap: 16px; margin-bottom: 16px; }
+.g4 { grid-template-columns: repeat(4, 1fr); }
+.g2 { grid-template-columns: repeat(2, 1fr); }
+.g3 { grid-template-columns: repeat(3, 1fr); }
+.g21 { grid-template-columns: 2fr 1fr; } .g32 { grid-template-columns: 3fr 2fr; } .g75 { grid-template-columns: 7fr 5fr; }
+.card { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); padding: 18px; scroll-margin-top: 16px; min-width: 0; }
+.card h3 { margin: 0 0 12px; font-size: 1.05rem; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.stack > * + * { margin-top: 16px; }
+.stat .val { font-size: 1.8rem; font-weight: 700; margin-top: 4px; }
+table { width: 100%; border-collapse: collapse; font-size: .88rem; }
+th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--border); }
+th { color: var(--muted); font-weight: 600; }
+.scroll { overflow: auto; }
+.bar { height: 8px; background: var(--border); border-radius: 99px; overflow: hidden; }
+.bar > div { height: 100%; border-radius: 99px; }
+.item { border-bottom: 1px solid var(--border); padding: 8px 0; font-size: .88rem; display: flex; justify-content: space-between; gap: 8px; align-items: center; }
+.item:last-child { border: 0; }
+.box { border: 1px solid var(--border); border-radius: 10px; padding: 10px; margin-bottom: 8px; }
+.alert { padding: 12px 14px; border-radius: 10px; margin-bottom: 14px; font-size: .9rem; }
+.alert.bad { background: #fee2e2; color: #991b1b; } .alert.info { background: #e0f2fe; color: #075985; } .alert.warn { background: #fef3c7; color: #92400e; }
+.id-card { padding: 0; overflow: hidden; }
+.id-card .head { padding: 14px 18px; }
+.id-card .body { display: flex; gap: 14px; padding: 16px 18px; align-items: center; }
+.toast { position: fixed; bottom: 20px; right: 20px; background: #111827; color: #fff; padding: 12px 18px; border-radius: 10px; opacity: 0; transform: translateY(10px); transition: .3s; z-index: 99; max-width: 340px; }
+.toast.show { opacity: 1; transform: none; }
+.menu-btn { display: none; }
+
+/* AI chat */
+.chat { height: 360px; overflow-y: auto; background: var(--soft); border-radius: 10px; padding: 10px; }
+.msg { max-width: 85%; padding: 8px 12px; border-radius: 12px; margin-bottom: 8px; white-space: pre-wrap; font-size: .9rem; line-height: 1.4; }
+.msg.user { background: var(--brand); color: #fff; margin-left: auto; border-bottom-right-radius: 3px; }
+.msg.bot { background: var(--card); border: 1px solid var(--border); border-bottom-left-radius: 3px; }
+.summary { white-space: pre-wrap; font-size: .85rem; background: var(--soft); border-radius: 8px; padding: 10px; margin-top: 8px; }
+/* ticket tracking */
+.steps { display: flex; gap: 4px; margin: 8px 0; }
+.steps div { flex: 1; height: 6px; border-radius: 99px; background: var(--border); }
+.steps div.on { background: var(--ok); }
+.timeline { border-left: 2px solid var(--border); margin-left: 6px; padding-left: 12px; font-size: .82rem; }
+.timeline > div { margin-bottom: 6px; }
+.live-dot { display: inline-block; width: 8px; height: 8px; background: var(--ok); border-radius: 50%; animation: pulse 1.4s infinite; }
+@keyframes pulse { 50% { opacity: .3; } }
+.flash { animation: flash 1.5s; }
+@keyframes flash { 0% { box-shadow: 0 0 0 3px var(--ok); } 100% { box-shadow: none; } }
+.quiz-q { margin-bottom: 18px; }
+.quiz-q label { color: var(--text); font-size: .92rem; display: flex; gap: 8px; align-items: center; margin: 6px 0; cursor: pointer; }
+.quiz-q input { width: auto; }
+
+@media (max-width: 1000px) { .g4 { grid-template-columns: repeat(2, 1fr); } .g3, .g2, .g21, .g32, .g75 { grid-template-columns: 1fr; } }
+@media (max-width: 760px) {
+  .sidebar { position: fixed; left: -260px; z-index: 50; transition: .25s; }
+  .sidebar.open { left: 0; }
+  .menu-btn { display: inline-flex; }
+  main { padding: 16px; }
+  .roles { grid-template-columns: repeat(3, 1fr); }
+}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<div id="toast" class="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script>
+/* =====================================================================
+   CampusVerse — single-file demo (HTML + CSS + JS, no server).
+   Data lives in this browser's localStorage, so two tabs of this page
+   stay in sync live (e.g. student in one tab, admin in another).
+   Logins here are for demonstration only.
+   ===================================================================== */
+
+const ROLES = {
+  admin: { label: "Admin", icon: "shield-lock" },
+  faculty: { label: "Faculty", icon: "person-video3" },
+  student: { label: "Student", icon: "backpack" },
+  alumni: { label: "Alumni", icon: "award" },
+  recruiter: { label: "Recruiter", icon: "briefcase" },
+};
+const TICKET_STEPS = ["Submitted", "Assigned", "In Progress", "Resolved"];
+const CATEGORIES = ["Hostel", "Maintenance", "Electrical", "Plumbing", "Internet", "Cleanliness", "Mess / Food", "Other"];
+
+const today = () => new Date().toISOString().slice(0, 10);
+const addDays = n => new Date(Date.now() + n * 864e5).toISOString().slice(0, 10);
+const stamp = () => new Date().toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" });
+
+/* ================= DEMO DATA ================= */
+function seedData() {
+  const subjects = [
+    { code: "CS301", name: "Database Systems", faculty: "FAC101" },
+    { code: "CS302", name: "Operating Systems", faculty: "FAC101" },
+    { code: "CS303", name: "Computer Networks", faculty: "FAC102" },
+    { code: "CS304", name: "Machine Learning", faculty: "FAC102" },
+  ];
+  const students = [
+    { u: "22CSE001", name: "Sandeep Paleru", dept: "CSE", cgpa: 8.6, xp: 420, blood: "B+", att: [17, 15, 18, 13], base: 72, phone: "910000000001" },
+    { u: "22CSE002", name: "Priya Sharma", dept: "CSE", cgpa: 9.1, xp: 510, blood: "O+", att: [19, 20, 18, 19], base: 86, phone: "910000000002" },
+    { u: "22ECE001", name: "Arjun Reddy", dept: "ECE", cgpa: 6.8, xp: 180, blood: "A+", att: [12, 14, 11, 13], base: 45, phone: "910000000003" },
+  ];
+  const users = [
+    { u: "admin", p: "admin@123", role: "admin", name: "Principal Office" },
+    { u: "FAC101", p: "faculty@123", role: "faculty", name: "Prof. Anitha Rao", dept: "CSE" },
+    { u: "FAC102", p: "faculty@123", role: "faculty", name: "Prof. Kiran Kumar", dept: "CSE" },
+    ...students.map(s => ({ u: s.u, p: "student@123", role: "student", name: s.name, dept: s.dept, roll: s.u,
+                            year: 3, cgpa: s.cgpa, xp: s.xp, blood: s.blood, parentPhone: s.phone })),
+    { u: "alumni.ravi", p: "alumni@123", role: "alumni", name: "Ravi Teja (2019 batch)" },
+    { u: "hr.techcorp", p: "recruiter@123", role: "recruiter", name: "TechCorp HR Team" },
+  ];
+  const attendance = {}, marks = {}, sgpa = {}, fees = {};
+  students.forEach(s => {
+    attendance[s.u] = {};
+    marks[s.u] = [];
+    subjects.forEach((sub, i) => {
+      attendance[s.u][sub.code] = { p: s.att[i], t: 20 };
+      [["Mid-1", 30], ["Mid-2", 30], ["Assignment", 10]].forEach(([exam, max], k) => {
+        const pct = Math.min(100, Math.max(0, s.base + ((i * 7 + k * 5) % 21) - 10));
+        marks[s.u].push({ code: sub.code, exam, score: Math.round(max * pct / 100), max });
+      });
+    });
+    sgpa[s.u] = [1, 2, 3, 4, 5].map(n => +(s.base / 10 + Math.sin(n + s.base) * 0.5 + 0.3).toFixed(2));
+    fees[s.u] = [
+      { id: 1, term: "Sem 5 Tuition", amount: 65000, paid: true, due: addDays(-60) },
+      { id: 2, term: "Sem 6 Tuition", amount: 65000, paid: false, due: addDays(15) },
+      { id: 3, term: "Exam Fee", amount: 1500, paid: false, due: addDays(5) },
+    ];
+  });
+  const t0 = stamp();
+  return {
+    users, subjects, attendance, marks, sgpa, fees,
+    assignments: [
+      { id: 1, code: "CS301", title: "ER diagram for library system", due: addDays(3),
+        content: "Draw an ER diagram for a college library. Entities are Book, Member, Loan and Author. Show the primary keys and cardinality: a member can borrow many books, and a book copy is on at most one active loan. Convert the diagram into relational tables in 3NF. Submit the work as a single PDF." },
+      { id: 2, code: "CS302", title: "Process scheduling report", due: addDays(6),
+        content: "Compare FCFS, SJF, Round Robin with quantum 4, and Priority scheduling for the given five processes. Draw a Gantt chart for each algorithm. Compute the average waiting time and the average turnaround time. State which algorithm performs best and explain why." },
+      { id: 3, code: "CS304", title: "Linear regression mini-project", due: addDays(10),
+        content: "Use the housing dataset to predict price from area and number of rooms. Split the data 80/20 into training and test sets. Train a linear regression model and report the MSE and R2 score. Plot predicted values against actual values and submit the notebook." },
+    ],
+    notes: [
+      { id: 1, code: "CS301", title: "Unit 1 - Relational Model",
+        content: "The relational model stores data in relations, which are tables. Each row is called a tuple and each column is an attribute with a domain. A super key uniquely identifies a tuple in a relation. A candidate key is a minimal super key with no extra attributes. The primary key is the candidate key chosen by the designer. A foreign key references the primary key of another relation and enforces referential integrity. Entity integrity means a primary key can never be NULL. Relational algebra provides selection, which filters rows, and projection, which picks columns. Other operations include union, set difference and Cartesian product. A join combines related tuples from two relations, and a natural join matches on common attributes." },
+      { id: 2, code: "CS301", title: "Unit 2 - SQL Queries",
+        content: "SQL has three parts: DDL, DML and DCL. DDL commands such as CREATE, ALTER and DROP define the structure of tables. DML commands such as SELECT, INSERT, UPDATE and DELETE work with the data. DCL commands such as GRANT and REVOKE control permissions. The WHERE clause filters rows before grouping. GROUP BY groups rows so that aggregate functions like COUNT, SUM and AVG can be applied. HAVING filters groups after aggregation. ORDER BY sorts the result. An INNER JOIN returns only matching rows from both tables. A LEFT JOIN keeps every row of the left table even without a match. A subquery is a query nested inside another query. A view is a virtual table defined by a stored query." },
+      { id: 3, code: "CS302", title: "Unit 1 - Processes & Threads",
+        content: "A process is a program in execution with its own address space and stack. The operating system tracks each process in a process control block, or PCB. A process moves through the states new, ready, running, waiting and terminated. A context switch saves the state of one process and loads the state of another. Threads are lightweight units of execution inside a process. Threads share code, data and files but each thread has its own stack and registers. User-level threads are managed by a library, while kernel threads are managed by the operating system. Multithreading improves responsiveness and resource sharing. Round Robin scheduling gives each process a fixed time quantum in turn." },
+      { id: 4, code: "CS303", title: "Unit 1 - OSI Model",
+        content: "The OSI model has seven layers. The Physical layer sends raw bits over the medium. The Data Link layer builds frames, uses MAC addresses and detects errors. The Network layer handles packets, IP addressing and routing. The Transport layer provides end-to-end delivery using TCP, which is reliable, or UDP, which is connectionless. The Session layer manages dialog control between applications. The Presentation layer handles encryption, compression and translation. The Application layer includes protocols such as HTTP, FTP, SMTP and DNS. Routers work at the network layer, switches at the data link layer and hubs at the physical layer." },
+      { id: 5, code: "CS304", title: "Unit 1 - Intro to ML",
+        content: "Machine learning lets computers learn patterns from data instead of following fixed rules. Supervised learning uses labelled data to train a model. Regression predicts continuous numbers, while classification predicts categories. Unsupervised learning finds structure in unlabelled data, for example clustering with k-means. Reinforcement learning trains an agent through rewards and penalties. Data is usually split into a training set and a test set. Overfitting happens when a model memorises the training data and performs poorly on new data. Underfitting happens when a model is too simple to capture the pattern. Common evaluation metrics are accuracy, precision, recall and mean squared error." },
+    ],
+    notices: [
+      { title: "Mid-2 exams from next Monday", body: "Timetable is in the Exams section.", target: "all", date: today() },
+      { title: "Hackathon registrations open", body: "Register before Friday. Winners get 200 XP!", target: "student", date: today() },
+      { title: "Hostel water supply maintenance", body: "Block B water off on Sunday 9 AM to 12 PM.", target: "student", date: today() },
+      { title: "Faculty meeting at 3 PM", body: "Seminar hall, agenda: internal assessment.", target: "faculty", date: today() },
+      { title: "Placement season 2026 begins", body: "Recruiters can now post drives.", target: "recruiter", date: today() },
+    ],
+    leaves: [{ id: 1, roll: "22ECE001", from: today(), to: today(), reason: "Medical appointment", status: "Pending" }],
+    grievances: [{ token: "GRV-1A2B3C", category: "Academics", message: "Lab sessions keep getting cancelled.", status: "In Progress" }],
+    tickets: [{ id: 1, roll: "22CSE001", category: "Electrical", title: "Fan not working", description: "Ceiling fan stopped working since last night.",
+                location: "Hostel Block A, Room 214", priority: "Medium", status: "In Progress", source: "Form", updated: t0,
+                updates: [{ status: "Submitted", message: "Complaint received by the admin office.", at: t0, by: "System" },
+                          { status: "Assigned", message: "Assigned to electrician Ramesh.", at: t0, by: "Principal Office" },
+                          { status: "In Progress", message: "Electrician will visit today by 5 PM.", at: t0, by: "Principal Office" }] }],
+    quizzes: [],         // { id, noteId, roll, questions, score, total, status, takenAt }
+    chats: {},           // roll -> [{ role, text }]
+    reportLog: [], lastReportRun: Date.now(),
+    jobs: [{ id: 1, by: "hr.techcorp", title: "Software Engineer Intern", company: "TechCorp",
+             desc: "6-month internship, Hyderabad. Stipend 30k/month.", minCgpa: 7.5, kind: "Drive" }],
+    applications: [],
+  };
+}
+
+/* ================= STORAGE (shared live across tabs) ================= */
+const KEY = "cv-db-v2";
+let DB, me = null, charts = [];
+function load() {
+  try { DB = JSON.parse(localStorage.getItem(KEY)); } catch (e) {}
+  if (!DB) DB = seedData();
+  try { me = sessionStorage.getItem("cv-user"); } catch (e) {}
+}
+function save() { try { localStorage.setItem(KEY, JSON.stringify(DB)); } catch (e) {} }
+function resetData() { if (!confirm("Reset all demo data?")) return; DB = seedData(); save(); toast("Demo data reset."); render(); }
+// Another tab changed the data (e.g. admin updated a complaint) -> refresh this view live.
+window.addEventListener("storage", e => {
+  if (e.key !== KEY || !me) return;
+  const before = JSON.stringify(myTickets());
+  try { DB = JSON.parse(e.newValue) || DB; } catch (err) {}
+  if (user(me)?.role === "student" && before !== JSON.stringify(myTickets())) toast("🔔 Your complaint was updated.");
+  if (user(me)?.role === "admin") toast("🔔 New activity on the complaints board.");
+  if (!document.querySelector(".quiz-q")) render();  // don't wipe a quiz in progress
+});
+
+/* ================= HELPERS ================= */
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const money = n => "₹" + n.toLocaleString("en-IN");
+const user = u => DB.users.find(x => x.u === u);
+const subName = code => DB.subjects.find(s => s.code === code)?.name || code;
+const nextId = list => list.reduce((m, x) => Math.max(m, x.id || 0), 0) + 1;
+function toast(msg) { const t = $("#toast"); t.textContent = msg; t.classList.add("show"); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove("show"), 3500); }
+const form = id => Object.fromEntries(new FormData(document.getElementById(id)));
+const myTickets = () => DB.tickets.filter(t => t.roll === me);
+
+/** Consecutive classes needed to reach 75%. */
+function classesNeeded(p, t) { return t && p / t < 0.75 ? Math.ceil((0.75 * t - p) / 0.25) : 0; }
+
+function summary(roll) {
+  const att = DB.subjects.map(s => {
+    const a = DB.attendance[roll][s.code], pct = a.t ? +(100 * a.p / a.t).toFixed(1) : 0;
+    return { code: s.code, name: s.name, ...a, pct, need: classesNeeded(a.p, a.t) };
+  });
+  const tp = att.reduce((s, a) => s + a.p, 0), tt = att.reduce((s, a) => s + a.t, 0);
+  const m = DB.marks[roll], avg = m.length ? m.reduce((s, x) => s + x.score / x.max * 100, 0) / m.length : 0;
+  const fees = DB.fees[roll];
+  return { att, overall: tt ? +(100 * tp / tt).toFixed(1) : 0, avg: +avg.toFixed(1), marks: m, fees,
+           pending: fees.filter(f => !f.paid).reduce((s, f) => s + f.amount, 0) };
+}
+const dueAssignments = () => DB.assignments.filter(a => a.due >= today()).sort((a, b) => a.due.localeCompare(b.due));
+const daysLeft = d => Math.ceil((new Date(d) - new Date(today())) / 864e5);
+
+/* =====================================================================
+   CAMPUS AI — runs fully in the browser (no API key needed).
+   Text summaries, quiz generation and a chat assistant that reads the
+   student's own data and faculty notes.
+   ===================================================================== */
+const STOP = new Set("a an the is are was were be been being of to in on at by for with and or but not no it its this that these those as from into than then there their they them which who whom what when where why how can could should would will shall may might must do does did has have had such each every other also only own same so too very just over under again further once here all any both few more most some about above below between through during before after up down out off is uses used use called".split(" "));
+const sentences = text => text.match(/[^.!?]+[.!?]+/g)?.map(s => s.trim()) || [text];
+const words = text => text.toLowerCase().match(/[a-z0-9]+/g) || [];
+
+function aiSummarize(text) {
+  const sents = sentences(text), freq = {};
+  words(text).filter(w => !STOP.has(w) && w.length > 2).forEach(w => freq[w] = (freq[w] || 0) + 1);
+  const scored = sents.map((s, i) => ({ s, i, score: words(s).reduce((t, w) => t + (freq[w] || 0), 0) / Math.sqrt(words(s).length + 1) }));
+  const keep = Math.min(5, Math.max(3, Math.ceil(sents.length * 0.45)));
+  const best = scored.slice().sort((a, b) => b.score - a.score).slice(0, keep).sort((a, b) => a.i - b.i);
+  const terms = Object.entries(freq).sort((a, b) => b[1] - a[1]).slice(0, 6).map(([w]) => w);
+  return "📌 Key points\n" + best.map(b => "• " + b.s).join("\n") + "\n\n🔑 Key terms: " + terms.join(", ");
+}
+
+function shuffle(arr, seed) {
+  const a = arr.slice(); let s = seed || 1;
+  for (let i = a.length - 1; i > 0; i--) { s = (s * 9301 + 49297) % 233280; const j = Math.floor(s / 233280 * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+  return a;
+}
+/** Fill-in-the-blank MCQs: hides an important term in a key sentence; distractors are other terms from the note. */
+function aiMakeQuiz(text, count = 5) {
+  const freq = {};
+  const terms = [...new Set((text.match(/\b[A-Za-z][A-Za-z0-9-]{3,}\b/g) || []).filter(w => !STOP.has(w.toLowerCase())))];
+  terms.forEach(t => freq[t] = (text.match(new RegExp("\\b" + t + "\\b", "g")) || []).length);
+  const qs = [];
+  for (const s of shuffle(sentences(text), text.length)) {
+    if (qs.length >= count || words(s).length < 7) continue;
+    const cands = (s.match(/\b[A-Za-z][A-Za-z0-9-]{3,}\b/g) || []).filter(w => !STOP.has(w.toLowerCase()) && terms.includes(w));
+    if (!cands.length) continue;
+    const answer = cands.sort((a, b) => (b.length + (b === b.toUpperCase() ? 4 : 0)) - (a.length + (a === a.toUpperCase() ? 4 : 0)))[0];
+    const wrong = shuffle(terms.filter(t => t.toLowerCase() !== answer.toLowerCase() && !s.includes(t)), answer.length).slice(0, 3);
+    if (wrong.length < 3) continue;
+    const options = shuffle([answer, ...wrong], s.length);
+    qs.push({ question: s.replace(new RegExp("\\b" + answer + "\\b"), "______"), options, answer: options.indexOf(answer) });
+  }
+  return qs;
+}
+
+/** Chat assistant: answers from the student's data, explains notes, raises complaints. */
+function aiReply(text) {
+  const u = user(me), s = summary(me), q = text.toLowerCase();
+  const chat = DB.chats[me] || (DB.chats[me] = []);
+  const pending = chat.pendingTicket;
+
+  // Continue a complaint that was missing its location
+  if (pending) {
+    delete chat.pendingTicket;
+    return raiseFromChat({ ...pending, location: text.trim() });
+  }
+  const issueWords = /(not working|broken|leak|leaking|no water|water|fan|light|bulb|switch|wifi|wi-fi|internet|tap|toilet|bathroom|washroom|clean|dirty|garbage|mess|food|ac\b|cooler|door|lock|window|bed|chair|power|electric|plug|socket|hostel)/;
+  if (issueWords.test(q) && /(not|broken|leak|no |dirty|bad|issue|problem|complain|repair|fix|stopped|damaged|smell|isn't|isnt|doesn't|doesnt)/.test(q)) {
+    const category =
+      /fan|light|bulb|switch|power|electric|plug|socket|ac\b|cooler/.test(q) ? "Electrical" :
+      /tap|leak|water|toilet|bathroom|washroom|pipe/.test(q) ? "Plumbing" :
+      /wifi|wi-fi|internet|network/.test(q) ? "Internet" :
+      /clean|dirty|garbage|smell/.test(q) ? "Cleanliness" :
+      /mess|food/.test(q) ? "Mess / Food" :
+      /door|lock|window|bed|chair/.test(q) ? "Maintenance" : "Hostel";
+    const loc = text.match(/\b(block\s*[a-z0-9]+\b(\s*,?\s*room\s*(no\.?\s*)?\d+[a-z]?)?|room\s*(no\.?\s*)?\d+[a-z]?|[a-z]-?\d{3})\b/i);
+    const titleWord = (q.match(/fan|light|bulb|tap|toilet|wifi|wi-fi|internet|door|lock|window|bed|chair|ac|cooler|water|socket|food|bathroom/) || ["Issue"])[0];
+    const ticket = { category, title: (titleWord[0].toUpperCase() + titleWord.slice(1)) + " problem",
+                     description: text.trim(), priority: /urgent|no water|power|short circuit|spark|danger|immediately/.test(q) ? "High" : "Medium" };
+    if (!loc) { chat.pendingTicket = ticket; return `I'll raise a ${category} complaint for you. 🛠️\nWhere is it? (e.g. "Block B, Room 108")`; }
+    return raiseFromChat({ ...ticket, location: loc[0] });
+  }
+  if (/complaint|ticket|status of my|\btrack/.test(q)) {
+    const t = myTickets();
+    return t.length ? "Your complaints:\n" + t.map(x => `• #${x.id} ${x.title} (${x.location}) → ${x.status}\n   Latest: ${x.updates.at(-1).message}`).join("\n")
+                    : "You have no complaints. Tell me about any hostel or maintenance issue and I'll raise one.";
+  }
+  if (/attendance|\bclasses\b|\bbunk|\babsent|\b75\b/.test(q)) {
+    const risky = s.att.filter(a => a.need);
+    return `Your overall attendance is ${s.overall}%.\n` + s.att.map(a => `• ${a.code} ${a.name}: ${a.pct}% (${a.p}/${a.t})${a.need ? ` ⚠️ attend the next ${a.need} classes to reach 75%` : " ✅"}`).join("\n")
+      + (risky.length ? `\n\nFocus on ${risky.map(a => a.code).join(", ")}.` : "\n\nYou're safe in every subject. Keep it up! 🎯");
+  }
+  if (/\b(marks?|scores?|grades?|internals?|exams?|results?|performance)\b/.test(q)) {
+    const bySub = DB.subjects.map(sub => { const m = s.marks.filter(x => x.code === sub.code); const got = m.reduce((t, x) => t + x.score, 0), max = m.reduce((t, x) => t + x.max, 0);
+      return { sub, pct: max ? Math.round(100 * got / max) : 0, got, max }; });
+    const weak = bySub.filter(b => b.pct < 50);
+    return `Your average is ${s.avg}%.\n` + bySub.map(b => `• ${b.sub.code} ${b.sub.name}: ${b.got}/${b.max} (${b.pct}%)`).join("\n")
+      + (weak.length ? `\n\nNeeds work: ${weak.map(b => b.sub.code).join(", ")}. Try the AI summary and quiz for those notes.` : "\n\nGood work across all subjects! 💪");
+  }
+  if (/\b(fees?|pay|payment|tuition)\b/.test(q)) {
+    const unpaid = s.fees.filter(f => !f.paid);
+    return unpaid.length ? `Pending fees: ${money(s.pending)}\n` + unpaid.map(f => `• ${f.term}: ${money(f.amount)} (due ${f.due})`).join("\n") + "\nYou can pay from the Fees section."
+                         : "All your fees are paid. ✅";
+  }
+  if (/assignment|homework|deadline|\bdue\b/.test(q)) {
+    const a = dueAssignments();
+    return a.length ? "Upcoming assignments:\n" + a.map(x => `• ${x.code} ${x.title}: ${daysLeft(x.due)} day(s) left`).join("\n") + "\nTap “AI explain” on any assignment for a quick breakdown."
+                    : "No pending assignments. 🎉";
+  }
+  if (/\b(cgpa|gpa|sgpa|rank|xp|level)\b/.test(q)) {
+    const peers = DB.users.filter(x => x.role === "student" && x.dept === u.dept);
+    return `CGPA: ${u.cgpa}\nXP: ${u.xp} (Level ${Math.floor(u.xp / 100) + 1})\nRank in ${u.dept}: #${peers.filter(x => x.xp > u.xp).length + 1} of ${peers.length}\nSGPA trend: ${DB.sgpa[me].join(" → ")}`;
+  }
+  // Doubt clearing: find the most relevant sentences across faculty notes
+  const qw = words(q).filter(w => !STOP.has(w) && w.length > 2 && !["explain", "what", "tell", "about", "define", "meaning", "notes", "note", "doubt"].includes(w));
+  if (qw.length) {
+    const hits = [];
+    DB.notes.forEach(n => sentences(n.content).forEach(sn => {
+      const sw = words(sn), score = qw.filter(w => sw.some(x => x.startsWith(w) || w.startsWith(x))).length;
+      if (score) hits.push({ n, sn, score });
+    }));
+    hits.sort((a, b) => b.score - a.score);
+    if (hits.length && hits[0].score >= Math.min(2, qw.length)) {
+      const top = hits.filter(h => h.n.id === hits[0].n.id).slice(0, 3);
+      return `From your ${top[0].n.code} notes, “${top[0].n.title}”:\n` + top.map(h => "• " + h.sn).join("\n") + "\n\nWant to test yourself? Take the AI quiz on this note.";
+    }
+  }
+  if (/^(hi|hello|hey|hii|good)/.test(q)) return `Hi ${u.name.split(" ")[0]}! 👋 How can I help today?`;
+  return "I can help with:\n• your attendance, marks, fees, CGPA and assignments\n• explaining topics from your faculty notes (e.g. “explain foreign key”)\n• hostel and maintenance complaints (e.g. “the fan in Block A room 214 is not working”)";
+}
+function raiseFromChat(t) {
+  const id = createTicket({ ...t, source: "AI assistant" });
+  return `✅ Complaint #${id} raised and sent to the admin office.\n• ${t.category}: ${t.title}\n• Where: ${t.location}\n• Priority: ${t.priority}\nTrack it live under “My complaints”.`;
+}
+function createTicket(t) {
+  const id = nextId(DB.tickets), at = stamp();
+  DB.tickets.unshift({ id, roll: me, status: "Submitted", updated: at, ...t,
+                       updates: [{ status: "Submitted", message: "Complaint received by the admin office.", at, by: "System" }] });
+  return id;
+}
+
+/* ================= LOGIN ================= */
+let pickedRole = "student";
+function renderLogin() {
+  $("#root").innerHTML = `
+  <div class="login-wrap grad">
+    <div class="hero">
+      <h1><i class="bi bi-mortarboard-fill"></i> CampusVerse</h1>
+      <p style="font-size:1.15rem">One login. Every role. Whole campus.</p>
+      <ul style="padding:0">
+        <li><i class="bi bi-robot"></i> AI assistant for every student</li>
+        <li><i class="bi bi-stars"></i> AI note summaries &amp; quizzes</li>
+        <li><i class="bi bi-broadcast"></i> Live hostel &amp; maintenance tracking</li>
+        <li><i class="bi bi-whatsapp"></i> Weekly PDF report to parents</li>
+      </ul>
+    </div>
+    <div class="login-card">
+      <h2 style="margin-top:0">Sign in</h2>
+      <div id="loginErr"></div>
+      <label>I am a</label>
+      <div class="roles">${Object.entries(ROLES).map(([k, r]) =>
+        `<button type="button" class="role-btn ${k === pickedRole ? "active" : ""}" onclick="pickRole('${k}')"><i class="bi bi-${r.icon}"></i>${r.label}</button>`).join("")}</div>
+      <form id="loginForm" onsubmit="doLogin(event)">
+        <label>Login ID</label><input name="u" required placeholder="Roll no / Employee ID" autocomplete="username">
+        <label>Password</label><input name="p" type="password" required autocomplete="current-password">
+        <button class="btn full">Login</button>
+      </form>
+    </div>
+  </div>`;
+}
+function pickRole(r) { pickedRole = r; renderLogin(); }
+function doLogin(e) {
+  e.preventDefault();
+  const { u, p } = form("loginForm");
+  const found = DB.users.find(x => x.u === u.trim() && x.p === p && x.role === pickedRole);
+  if (!found) { $("#loginErr").innerHTML = `<div class="alert bad">Invalid ID, password, or role.</div>`; return; }
+  me = found.u;
+  try { sessionStorage.setItem("cv-user", me); } catch (e) {}
+  render();
+}
+function logout() { me = null; quizState = null; try { sessionStorage.removeItem("cv-user"); } catch (e) {} render(); }
+
+/* ================= SHELL ================= */
+function shell(u, nav, content) {
+  return `
+  <div class="app">
+    <aside class="sidebar" id="sidebar">
+      <div class="logo"><i class="bi bi-mortarboard-fill" style="color:var(--brand)"></i> CampusVerse</div>
+      <div class="muted" style="margin-bottom:14px">${ROLES[u.role].label} portal</div>
+      <nav>${nav.map(([id, icon, label, badge]) => `<a href="#${id}" onclick="closeMenu()"><span><i class="bi bi-${icon}"></i> ${label}</span>${badge ? `<span class="badge bad">${badge}</span>` : ""}</a>`).join("")}</nav>
+      <hr style="border:0;border-top:1px solid var(--border)">
+      <a href="#" class="muted" onclick="resetData();return false"><i class="bi bi-arrow-counterclockwise"></i> Reset demo data</a>
+    </aside>
+    <main>
+      <div class="topbar">
+        <div>
+          <button class="btn ghost sm menu-btn" onclick="$('#sidebar').classList.toggle('open')"><i class="bi bi-list"></i></button>
+          <h2 style="display:inline">Welcome, ${esc(u.name)} 👋</h2>
+          <span class="badge">${ROLES[u.role].label}</span>
+        </div>
+        <div>
+          <button class="btn ghost sm" onclick="toggleTheme()" title="Dark mode"><i class="bi bi-moon-stars"></i></button>
+          <button class="btn red sm" onclick="logout()"><i class="bi bi-box-arrow-right"></i> Logout</button>
+        </div>
+      </div>
+      ${content}
+    </main>
+  </div>`;
+}
+function closeMenu() { $("#sidebar")?.classList.remove("open"); }
+const stat = (label, val) => `<div class="card stat"><div class="muted">${label}</div><div class="val">${val}</div></div>`;
+
+function noticesCard(role) {
+  const list = DB.notices.filter(n => n.target === "all" || n.target === role).slice().reverse();
+  return `<section id="notices" class="card"><h3><i class="bi bi-megaphone"></i> Notices</h3>
+    ${list.map(n => `<div style="border-left:3px solid var(--brand);padding-left:10px;margin-bottom:10px">
+      <b>${esc(n.title)}</b><div class="muted">${esc(n.body)} · ${n.date}</div></div>`).join("") || `<p class="muted">No notices.</p>`}</section>`;
+}
+function ticketCard(t, admin) {
+  const step = TICKET_STEPS.indexOf(t.status), s = admin ? user(t.roll) : null;
+  return `<div class="box" id="tk-${t.id}" style="${t.priority === "High" && t.status !== "Resolved" ? "border-color:var(--bad)" : ""}">
+    <div style="display:flex;justify-content:space-between;gap:6px"><b>#${t.id} ${esc(t.title)}</b>
+      <span class="badge ${t.status === "Resolved" ? "ok" : "warn"}">${t.status}</span></div>
+    <div class="muted">${admin ? `${t.roll} ${esc(s?.name)} · ` : ""}${esc(t.category)} · ${esc(t.location)} · ${t.priority}${t.source === "AI assistant" ? " · via AI 🤖" : ""}</div>
+    ${admin ? `<div style="font-size:.85rem;margin-top:4px">${esc(t.description)}</div>` : ""}
+    <div class="steps">${TICKET_STEPS.map((x, i) => `<div class="${i <= step ? "on" : ""}" title="${x}"></div>`).join("")}</div>
+    ${admin ? `<div class="muted">Latest: ${esc(t.updates.at(-1).message)} (${t.updated})</div>
+      ${t.status !== "Resolved" ? `<form class="row" style="margin-top:8px" onsubmit="updateTicket(event, ${t.id})">
+        <select name="status" style="flex:0 0 130px">${TICKET_STEPS.map(x => `<option ${x === t.status ? "selected" : ""}>${x}</option>`).join("")}</select>
+        <input name="message" placeholder="Update for the student, e.g. Plumber assigned"><button class="btn sm" style="flex:0">Update</button></form>` : ""}`
+    : `<div class="timeline">${t.updates.slice().reverse().map(x => `<div><b>${x.status}</b> — ${esc(x.message)}<div class="muted" style="font-size:.72rem">${x.at} · ${esc(x.by)}</div></div>`).join("")}</div>`}
+  </div>`;
+}
+
+/* Attendance, marks, fees */
+function academicCards(roll) {
+  const s = summary(roll);
+  return `
+  <section id="attendance" class="card">
+    <h3><i class="bi bi-calendar-check"></i> Attendance <span class="badge ${s.overall >= 75 ? "ok" : "bad"}">${s.overall}%</span></h3>
+    <div class="scroll"><table><tr><th>Subject</th><th>Attended</th><th style="width:28%">%</th><th>Risk alert</th></tr>
+    ${s.att.map(a => `<tr><td><b>${a.code}</b> <span class="muted">${a.name}</span></td><td>${a.p}/${a.t}</td>
+      <td><div class="bar"><div style="width:${a.pct}%;background:${a.pct >= 75 ? "var(--ok)" : "var(--bad)"}"></div></div><span class="muted">${a.pct}%</span></td>
+      <td>${a.need ? `<span class="bad" style="font-size:.82rem"><i class="bi bi-exclamation-triangle"></i> Attend next ${a.need} classes to reach 75%</span>`
+                   : `<span class="ok" style="font-size:.82rem"><i class="bi bi-check-circle"></i> Safe</span>`}</td></tr>`).join("")}
+    </table></div>
+  </section>
+  <section id="marks" class="card">
+    <h3><i class="bi bi-bar-chart"></i> Marks <span class="badge">Avg ${s.avg}%</span></h3>
+    <div class="scroll" style="max-height:300px"><table><tr><th>Subject</th><th>Exam</th><th>Score</th><th>%</th></tr>
+    ${s.marks.map(m => { const p = +(m.score / m.max * 100).toFixed(1);
+      return `<tr><td>${m.code}</td><td>${esc(m.exam)}</td><td>${m.score}/${m.max}</td><td class="${p < 50 ? "bad" : ""}">${p}%</td></tr>`; }).join("")}
+    </table></div>
+  </section>
+  <section id="fees" class="card">
+    <h3><i class="bi bi-wallet2"></i> Fees <span class="badge warn">Pending ${money(s.pending)}</span></h3>
+    <table><tr><th>Term</th><th>Amount</th><th>Due</th><th>Status</th></tr>
+    ${s.fees.map(f => `<tr><td>${f.term}</td><td>${money(f.amount)}</td><td>${f.due}</td><td>${
+      f.paid ? `<span class="badge ok">Paid</span>` : `<button class="btn sm" onclick="payFee(${f.id})">Pay now (demo)</button>`}</td></tr>`).join("")}
+    </table>
+  </section>`;
+}
+
+/* ================= STUDENT ================= */
+let quizState = null;   // { noteId, questions } while a quiz is open
+function studentView(u) {
+  if (quizState) return quizView(u);
+  const s = summary(u.roll);
+  const peers = DB.users.filter(x => x.role === "student").sort((a, b) => b.xp - a.xp);
+  const rank = peers.filter(x => x.dept === u.dept && x.xp > u.xp).length + 1;
+  const level = Math.floor(u.xp / 100) + 1;
+  const myLeaves = DB.leaves.filter(l => l.roll === u.roll).slice().reverse();
+  const chat = DB.chats[u.roll] || [];
+  const tickets = myTickets();
+  const open = tickets.filter(t => t.status !== "Resolved").length;
+  const nav = [["overview","speedometer2","Overview"],["ai","robot","AI Assistant"],["tickets","tools","My complaints",open || ""],
+    ["attendance","calendar-check","Attendance"],["marks","bar-chart","Marks"],["cgpa","graph-up","SGPA trend"],
+    ["assignments","journal-text","Assignments"],["notes","folder2-open","Notes & AI quiz"],["fees","wallet2","Fees"],
+    ["leave","envelope-paper","Leave / OD"],["career","briefcase","Placements"],["grievance","incognito","Grievance"],
+    ["idcard","person-vcard","Digital ID"],["parent","whatsapp","Parent WhatsApp"],["notices","megaphone","Notices"]];
+
+  const content = `
+  <section id="overview" class="grid g4">
+    ${stat("Attendance", `<span class="${s.overall >= 75 ? "ok" : "bad"}">${s.overall}%</span>`)}
+    ${stat("CGPA", u.cgpa)}
+    ${stat("Fees pending", money(s.pending))}
+    <div class="card stat grad"><div style="opacity:.85;font-size:.85rem">Level ${level} · Rank #${rank} in ${u.dept}</div>
+      <div class="val">${u.xp} XP</div><div class="bar" style="background:rgba(255,255,255,.3)"><div style="width:${u.xp % 100}%;background:#fff"></div></div></div>
+  </section>
+
+  <div class="grid g75">
+    <section id="ai" class="card">
+      <h3 style="justify-content:space-between"><span><i class="bi bi-robot" style="color:var(--brand)"></i> AI Assistant</span>
+        <button class="btn ghost sm" onclick="clearChat()">Clear chat</button></h3>
+      <div class="chat" id="chatBox">
+        <div class="msg bot">Hi ${esc(u.name.split(" ")[0])}! 👋 Ask me about your attendance, marks, fees or assignments, clear a doubt from your notes, or tell me about a hostel / maintenance problem and I'll raise a complaint for you.</div>
+        ${chat.map(m => `<div class="msg ${m.role}">${esc(m.text)}</div>`).join("")}
+      </div>
+      <div class="chips">${["What's my attendance?", "Which assignments are due?", "Explain foreign key", "My marks", "The fan in Block A room 214 is not working", "Status of my complaints"]
+        .map(q => `<button class="chip" onclick="ask(this.textContent)">${q}</button>`).join("")}</div>
+      <form class="row" onsubmit="event.preventDefault(); ask($('#chatInput').value)">
+        <input id="chatInput" placeholder="Ask anything or report an issue…" autocomplete="off" style="flex:1">
+        <button class="btn" style="flex:0"><i class="bi bi-send"></i></button>
+      </form>
+    </section>
+    <section id="tickets" class="card">
+      <h3 style="justify-content:space-between"><span><i class="bi bi-tools"></i> My complaints</span>
+        <span class="badge ok"><span class="live-dot"></span> Live</span></h3>
+      <p class="muted" style="margin-top:-6px">Hostel &amp; maintenance issues go to the admin office. Updates appear here instantly.</p>
+      <div class="scroll" style="max-height:330px">${tickets.map(t => ticketCard(t, false)).join("") || `<p class="muted">No complaints. Tell the AI about any issue.</p>`}</div>
+      <details style="margin-top:8px"><summary class="muted" style="cursor:pointer;color:var(--brand)">Raise a complaint without AI</summary>
+        <form id="ticketForm" onsubmit="submitTicket(event)">
+          <div class="row"><div><label>Category</label><select name="category">${CATEGORIES.map(c => `<option>${c}</option>`).join("")}</select></div>
+            <div><label>Priority</label><select name="priority"><option>Low</option><option selected>Medium</option><option>High</option></select></div></div>
+          <label>What's wrong?</label><input name="title" required placeholder="e.g. Tap leaking">
+          <label>Where?</label><input name="location" required placeholder="e.g. Block B, Room 108">
+          <label>Details</label><textarea name="description" rows="2" required></textarea>
+          <button class="btn dark full">Send to admin</button>
+        </form></details>
+    </section>
+  </div>
+
+  <div class="grid g21">
+    <div class="stack">${academicCards(u.roll)}</div>
+    <div class="stack">
+      <section class="card"><h3><i class="bi bi-trophy"></i> Leaderboard</h3>
+        <ol style="margin:0;padding-left:20px">${peers.slice(0, 5).map(p => `<li style="${p.u === u.u ? "font-weight:700;color:var(--brand)" : ""}">${esc(p.name)} — ${p.xp} XP</li>`).join("")}</ol>
+        <div class="chips">
+          ${s.overall >= 75 ? `<span class="badge ok">🎯 Regular Attendee</span>` : ""}
+          ${u.cgpa >= 8.5 ? `<span class="badge">🧠 Topper Club</span>` : ""}
+          ${u.xp >= 400 ? `<span class="badge warn">⚡ XP 400+</span>` : ""}
+          ${DB.quizzes.some(q => q.roll === u.roll && q.status === "Submitted") ? `<span class="badge">📝 Quiz Taker</span>` : ""}
+        </div></section>
+      <section id="cgpa" class="card"><h3><i class="bi bi-graph-up"></i> SGPA trend</h3><canvas id="sgpaChart" height="200"></canvas></section>
+      <section id="assignments" class="card"><h3><i class="bi bi-journal-text"></i> Assignments due</h3>
+        ${dueAssignments().map(a => { const d = daysLeft(a.due);
+          return `<div class="box"><div style="display:flex;justify-content:space-between;gap:6px"><span><b>${a.code}</b> ${esc(a.title)}</span>
+            <span class="bad" style="white-space:nowrap;font-size:.82rem">${d <= 0 ? "Due today" : d + " day" + (d > 1 ? "s" : "") + " left"}</span></div>
+            ${a.content ? `<button class="btn outline sm" style="margin-top:6px" onclick="toggleSummary('assignment', ${a.id})"><i class="bi bi-stars"></i> AI explain</button>
+            <div class="summary" id="sum-assignment-${a.id}" hidden></div>` : ""}</div>`; }).join("") || `<p class="muted">Nothing due 🎉</p>`}
+      </section>
+    </div>
+  </div>
+
+  <section id="notes" class="card" style="margin-bottom:16px"><h3><i class="bi bi-folder2-open"></i> Notes from faculty</h3>
+    <p class="muted" style="margin-top:-6px">Get an AI summary of any note, then take a 5-question AI quiz. Quiz scores go only to your faculty (+20 XP for taking one).</p>
+    <div class="grid g2" style="margin:0">${DB.notes.slice().reverse().map(n => {
+      const done = DB.quizzes.some(q => q.noteId === n.id && q.roll === u.roll && q.status === "Submitted");
+      return `<div class="box" style="margin:0"><div style="display:flex;justify-content:space-between;gap:6px">
+        <span><i class="bi bi-file-earmark-text bad"></i> <b>${n.code}</b> ${esc(n.title)}</span>${done ? `<span class="badge ok">Quiz done</span>` : ""}</div>
+        <div class="chips"><button class="btn outline sm" onclick="toggleSummary('note', ${n.id})"><i class="bi bi-stars"></i> AI summary</button>
+          ${done ? "" : `<button class="btn sm" onclick="startQuiz(${n.id})"><i class="bi bi-patch-question"></i> Take AI quiz</button>`}</div>
+        <div class="summary" id="sum-note-${n.id}" hidden></div></div>`; }).join("")}</div>
+  </section>
+
+  <div class="grid g2">
+    <section id="leave" class="card"><h3><i class="bi bi-envelope-paper"></i> Leave / OD request</h3>
+      <form id="leaveForm" onsubmit="applyLeave(event)">
+        <div class="row"><div><label>From</label><input type="date" name="from" required></div><div><label>To</label><input type="date" name="to" required></div></div>
+        <label>Reason</label><input name="reason" required>
+        <button class="btn full">Submit request</button>
+      </form>
+      <div style="margin-top:10px">${myLeaves.map(l => `<div class="item"><span>${l.from} → ${l.to} · ${esc(l.reason)}</span>
+        <span class="badge ${l.status === "Approved" ? "ok" : l.status === "Rejected" ? "bad" : "grey"}">${l.status}</span></div>`).join("")}</div>
+    </section>
+    <section id="career" class="card"><h3><i class="bi bi-briefcase"></i> Placements &amp; referrals</h3>
+      ${DB.jobs.slice().reverse().map(j => {
+        const app = DB.applications.find(a => a.jobId === j.id && a.roll === u.roll);
+        return `<div class="box"><div style="display:flex;justify-content:space-between;gap:6px"><b>${esc(j.title)} · ${esc(j.company)}</b><span class="badge">${j.kind}</span></div>
+          <div class="muted">${esc(j.desc)} · Min CGPA ${j.minCgpa}</div>
+          <div style="margin-top:6px">${app ? `<span class="badge ok">${app.status}</span>`
+            : u.cgpa >= j.minCgpa ? `<button class="btn sm" onclick="applyJob(${j.id})">Apply</button>` : `<span class="badge grey">Not eligible</span>`}</div></div>`; }).join("") || `<p class="muted">No openings yet.</p>`}
+    </section>
+    <section id="grievance" class="card"><h3><i class="bi bi-incognito"></i> Anonymous grievance</h3>
+      <p class="muted" style="margin-top:-6px">For sensitive issues (ragging, harassment). Your name is never stored.</p>
+      <form id="grvForm" onsubmit="submitGrievance(event)">
+        <label>Category</label><select name="category"><option>Academics</option><option>Ragging / Safety</option><option>Harassment</option><option>Other</option></select>
+        <label>Message</label><textarea name="message" rows="2" required></textarea>
+        <button class="btn dark full">Submit anonymously</button>
+      </form>
+      <form id="trackForm" onsubmit="trackGrievance(event)" class="row" style="margin-top:12px">
+        <div><input name="token" required placeholder="Tracking token e.g. GRV-1A2B3C"></div><button class="btn ghost" style="flex:0">Track</button>
+      </form>
+    </section>
+    <div class="stack">
+      <section id="idcard" class="card id-card" style="max-width:380px">
+        <div class="head grad"><b><i class="bi bi-mortarboard-fill"></i> CampusVerse College</b><div style="font-size:.8rem">Student Identity Card</div></div>
+        <div class="body"><div id="qr" style="background:#fff;padding:4px;border-radius:6px"></div>
+          <div style="font-size:.88rem"><b style="font-size:1rem">${esc(u.name)}</b><br>Roll: ${u.roll}<br>Dept: ${u.dept} · Year ${u.year}<br>Blood: ${u.blood}</div></div>
+      </section>
+      <section id="parent" class="card"><h3><i class="bi bi-whatsapp" style="color:#25d366"></i> Parent's WhatsApp</h3>
+        <p class="muted" style="margin-top:-6px">Your weekly performance report (PDF) goes to this number every week.</p>
+        <form id="phoneForm" class="row" onsubmit="savePhone(event)">
+          <div><input name="phone" value="${esc(u.parentPhone || "")}" placeholder="919876543210" required></div>
+          <button class="btn green" style="flex:0">Save</button></form>
+        <button class="btn ghost sm" style="margin-top:8px" onclick="downloadReport('${u.roll}')"><i class="bi bi-file-earmark-pdf"></i> Download my weekly report</button>
+      </section>
+    </div>
+  </div>
+  <div style="margin-top:16px">${noticesCard("student")}</div>`;
+
+  return { html: shell(u, nav, content), after() {
+    new QRCode(document.getElementById("qr"), { text: "CAMPUSVERSE:" + u.roll, width: 90, height: 90 });
+    chart("sgpaChart", { type: "line", data: { labels: DB.sgpa[u.roll].map((_, i) => "Sem " + (i + 1)),
+      datasets: [{ label: "SGPA", data: DB.sgpa[u.roll], borderColor: "#4f46e5", tension: .3 }] },
+      options: { plugins: { legend: { display: false } }, scales: { y: { min: 4, max: 10 } } } });
+    const box = $("#chatBox"); box.scrollTop = box.scrollHeight;
+  } };
+}
+
+/* student actions */
+function ask(text) {
+  text = text.trim(); if (!text) return;
+  const chat = DB.chats[me] || (DB.chats[me] = []);
+  const box = $("#chatBox"), input = $("#chatInput");
+  input.value = "";
+  const addMsg = (role, t) => { const d = document.createElement("div"); d.className = "msg " + role; d.textContent = t; box.appendChild(d); box.scrollTop = box.scrollHeight; return d; };
+  addMsg("user", text);
+  const typing = addMsg("bot", "Thinking…");
+  setTimeout(() => {
+    const ticketsBefore = DB.tickets.length;
+    const reply = aiReply(text);
+    chat.push({ role: "user", text }, { role: "bot", text: reply });
+    if (chat.length > 40) chat.splice(0, chat.length - 40);
+    save();
+    if (DB.tickets.length > ticketsBefore) { render(); setTimeout(() => $("#tk-" + DB.tickets[0].id)?.classList.add("flash"), 50); }
+    else typing.textContent = reply;
+    $("#chatInput")?.focus();
+  }, 450);
+}
+function clearChat() { DB.chats[me] = []; save(); render(); }
+function toggleSummary(kind, id) {
+  const el = $(`#sum-${kind}-${id}`);
+  if (!el.textContent) {
+    const item = (kind === "note" ? DB.notes : DB.assignments).find(x => x.id === id);
+    item.summary = item.summary || aiSummarize(item.content); save();  // generated once, shared by all students
+    el.textContent = item.summary;
+  }
+  el.hidden = !el.hidden;
+}
+function startQuiz(noteId) {
+  const note = DB.notes.find(n => n.id === noteId);
+  const questions = aiMakeQuiz(note.content);
+  if (questions.length < 3) return toast("This note is too short to make a quiz.");
+  quizState = { noteId, questions };
+  render(); window.scrollTo(0, 0);
+}
+function quizView(u) {
+  const note = DB.notes.find(n => n.id === quizState.noteId);
+  const content = `<section class="card" style="max-width:780px">
+    <h3><i class="bi bi-patch-question" style="color:var(--brand)"></i> AI Quiz: ${note.code} · ${esc(note.title)}</h3>
+    <p class="muted">${quizState.questions.length} questions generated by AI from your faculty's notes. Fill in the blank in each statement. Your score goes only to your faculty.</p>
+    <form id="quizForm" onsubmit="submitQuiz(event)">
+      ${quizState.questions.map((q, i) => `<div class="quiz-q"><b>${i + 1}. ${esc(q.question)}</b>
+        ${q.options.map((o, k) => `<label><input type="radio" name="q${i}" value="${k}" required> ${esc(o)}</label>`).join("")}</div>`).join("")}
+      <div class="row" style="max-width:340px"><button class="btn">Submit quiz</button><button type="button" class="btn ghost" onclick="quizState=null;render()">Cancel</button></div>
+    </form></section>`;
+  return { html: shell(u, [["", "arrow-left", "Back"]], content) };
+}
+function submitQuiz(e) {
+  e.preventDefault();
+  if (!confirm("Submit your answers? You can take this quiz only once.")) return;
+  const fd = new FormData(e.target);
+  const score = quizState.questions.filter((q, i) => +fd.get("q" + i) === q.answer).length;
+  DB.quizzes.push({ id: nextId(DB.quizzes), noteId: quizState.noteId, roll: me, score, total: quizState.questions.length, status: "Submitted", takenAt: stamp() });
+  user(me).xp += 20; quizState = null; save();
+  toast("Quiz submitted! Your score was sent to your faculty. +20 XP"); render();
+}
+function submitTicket(e) { e.preventDefault(); const id = createTicket({ ...form("ticketForm"), source: "Form" }); save(); toast(`Complaint #${id} sent to admin.`); render(); }
+function savePhone(e) { e.preventDefault(); const p = form("phoneForm").phone.replace(/\D/g, "");
+  if (p.length < 10 || p.length > 15) return toast("Enter the number with country code, e.g. 919876543210.");
+  user(me).parentPhone = p; save(); toast("Parent's WhatsApp number saved."); render(); }
+function payFee(id) { DB.fees[me].find(f => f.id === id).paid = true; save(); toast("Payment recorded (demo — no real money moved)."); render(); }
+function applyLeave(e) { e.preventDefault(); DB.leaves.push({ id: nextId(DB.leaves), roll: me, ...form("leaveForm"), status: "Pending" }); save(); toast("Leave request submitted."); render(); }
+function applyJob(id) { DB.applications.push({ id: nextId(DB.applications), jobId: id, roll: me, status: "Applied" }); save(); toast("Application sent!"); render(); }
+function submitGrievance(e) { e.preventDefault(); const f = form("grvForm");
+  const token = "GRV-" + Math.random().toString(16).slice(2, 8).toUpperCase();
+  DB.grievances.push({ token, ...f, status: "Open" }); save(); render();
+  alert("Submitted anonymously.\nYour tracking token: " + token + "\nSave it to check the status later."); }
+function trackGrievance(e) { e.preventDefault(); const t = form("trackForm").token.trim().toUpperCase();
+  const g = DB.grievances.find(x => x.token === t); toast(g ? `${g.token}: ${g.status}` : "No grievance found for that token."); }
+
+/* ================= FACULTY ================= */
+function facultyView(u) {
+  const mySubs = DB.subjects.filter(s => s.faculty === u.u), myCodes = mySubs.map(s => s.code);
+  const studs = DB.users.filter(x => x.role === "student");
+  const weak = studs.map(st => ({ st, s: summary(st.roll) })).filter(x => x.s.overall < 75 || x.s.avg < 50);
+  const pending = DB.leaves.filter(l => l.status === "Pending");
+  const results = DB.quizzes.filter(q => q.status === "Submitted" && myCodes.includes(DB.notes.find(n => n.id === q.noteId)?.code)).slice().reverse();
+  const subOpts = mySubs.map(s => `<option value="${s.code}">${s.code} · ${s.name}</option>`).join("");
+  const studOpts = studs.map(s => `<option value="${s.roll}">${s.roll} — ${esc(s.name)}</option>`).join("");
+  const nav = [["take","calendar-check","Take attendance"],["weak","exclamation-triangle","At-risk students"],["quizzes","patch-check","AI quiz results"],
+    ["leaves","envelope-paper","Leave requests"],["upload","upload","Notes / tasks / marks"],["notices","megaphone","Notices"]];
+  const content = `
+  <div class="grid g4">${stat("My subjects", mySubs.length)}${stat("Students", studs.length)}
+    ${stat("At-risk", `<span class="bad">${weak.length}</span>`)}${stat("Quizzes taken", results.length)}</div>
+  <div class="grid g2">
+    <section id="take" class="card"><h3><i class="bi bi-calendar-check"></i> Take attendance</h3>
+      <form id="attForm" onsubmit="takeAttendance(event)">
+        <div class="row"><div><label>Subject</label><select name="code">${subOpts}</select></div><div><label>Date</label><input type="date" name="date" value="${today()}"></div></div>
+        <div style="margin:10px 0">${studs.map(s => `<label style="display:flex;gap:8px;align-items:center;color:var(--text);font-size:.9rem">
+          <input type="checkbox" name="present" value="${s.roll}" checked style="width:auto"> ${s.roll} — ${esc(s.name)}</label>`).join("")}</div>
+        <button class="btn">Save attendance (+5 XP each present)</button>
+      </form>
+    </section>
+    <div class="stack">
+      <section id="weak" class="card"><h3><i class="bi bi-exclamation-triangle bad"></i> At-risk students</h3>
+        <p class="muted" style="margin-top:-6px">Attendance below 75% or average marks below 50%.</p>
+        <table><tr><th>Roll</th><th>Name</th><th>Att.</th><th>Avg</th></tr>
+        ${weak.map(({ st, s }) => `<tr><td>${st.roll}</td><td>${esc(st.name)}</td><td class="${s.overall < 75 ? "bad" : ""}">${s.overall}%</td><td class="${s.avg < 50 ? "bad" : ""}">${s.avg}%</td></tr>`).join("")
+          || `<tr><td colspan="4" class="ok">Everyone is on track 🎉</td></tr>`}</table>
+      </section>
+      <section id="leaves" class="card"><h3><i class="bi bi-envelope-paper"></i> Leave requests</h3>
+        ${pending.map(l => `<div class="item"><span><b>${l.roll}</b> ${esc(user(l.roll).name)}<br><span class="muted">${l.from} → ${l.to} · ${esc(l.reason)}</span></span>
+          <span style="white-space:nowrap"><button class="btn green sm" onclick="setLeave(${l.id},'Approved')">Approve</button>
+          <button class="btn red sm" onclick="setLeave(${l.id},'Rejected')">Reject</button></span></div>`).join("") || `<p class="muted">No pending requests.</p>`}
+      </section>
+    </div>
+  </div>
+  <section id="quizzes" class="card" style="margin-bottom:16px"><h3><i class="bi bi-patch-check"></i> AI quiz results <span class="badge grey">only you see these</span></h3>
+    <p class="muted" style="margin-top:-6px">Students take AI-generated quizzes on the notes you share. Scores are sent only to you.</p>
+    <div class="scroll"><table><tr><th>Student</th><th>Note</th><th>Score</th><th>Taken</th></tr>
+    ${results.map(q => { const n = DB.notes.find(x => x.id === q.noteId), p = Math.round(100 * q.score / q.total);
+      return `<tr><td>${q.roll} — ${esc(user(q.roll)?.name)}</td><td><b>${n.code}</b> ${esc(n.title)}</td>
+        <td><span class="badge ${p >= 60 ? "ok" : "bad"}">${q.score}/${q.total} (${p}%)</span></td><td class="muted">${q.takenAt}</td></tr>`; }).join("")
+      || `<tr><td colspan="4" class="muted">No quizzes taken yet.</td></tr>`}</table></div>
+  </section>
+  <section id="upload" class="grid g3">
+    <div class="card"><h3><i class="bi bi-folder-plus"></i> Share notes <span class="badge">AI summary + quiz</span></h3>
+      <form id="noteForm" onsubmit="shareNote(event)">
+        <label>Subject</label><select name="code">${subOpts}</select>
+        <label>Title</label><input name="title" required placeholder="Unit 3 - Normalization">
+        <label>Upload .txt file</label><input type="file" accept=".txt" onchange="readTxt(this, 'noteText')">
+        <label>…or paste the note text</label><textarea id="noteText" name="content" rows="4" required placeholder="Students get an AI summary and quiz from this text."></textarea>
+        <button class="btn full">Share</button></form></div>
+    <div class="card"><h3><i class="bi bi-journal-plus"></i> Post assignment</h3>
+      <form id="asgForm" onsubmit="postAssignment(event)">
+        <label>Subject</label><select name="code">${subOpts}</select>
+        <label>Title</label><input name="title" required>
+        <label>Instructions</label><textarea name="content" rows="3" placeholder="Students can get an AI explanation of this."></textarea>
+        <label>Due date</label><input name="due" type="date" required>
+        <button class="btn full">Post</button></form></div>
+    <div class="card"><h3><i class="bi bi-123"></i> Upload marks</h3>
+      <form id="marksForm" onsubmit="uploadMarks(event)">
+        <label>Subject</label><select name="code">${subOpts}</select>
+        <label>Student</label><select name="roll">${studOpts}</select>
+        <label>Exam</label><input name="exam" required placeholder="e.g. Quiz-1">
+        <div class="row"><div><label>Score</label><input name="score" type="number" step="0.5" required></div><div><label>Max</label><input name="max" type="number" value="30" required></div></div>
+        <button class="btn full">Upload</button></form></div>
+  </section>
+  ${noticesCard("faculty")}`;
+  return { html: shell(u, nav, content) };
+}
+function readTxt(input, target) {
+  const f = input.files[0]; if (!f) return;
+  const r = new FileReader(); r.onload = () => { document.getElementById(target).value = r.result; }; r.readAsText(f);
+}
+function takeAttendance(e) { e.preventDefault();
+  const fd = new FormData(e.target), code = fd.get("code"), present = fd.getAll("present");
+  DB.users.filter(x => x.role === "student").forEach(s => {
+    const a = DB.attendance[s.roll][code]; a.t++;
+    if (present.includes(s.roll)) { a.p++; s.xp += 5; }
+  });
+  save(); toast(`Attendance saved: ${present.length} present.`); render(); }
+function setLeave(id, status) { DB.leaves.find(l => l.id === id).status = status; save(); toast("Leave " + status.toLowerCase() + "."); render(); }
+function uploadMarks(e) { e.preventDefault(); const f = form("marksForm");
+  DB.marks[f.roll].push({ code: f.code, exam: f.exam, score: +f.score, max: +f.max }); save(); toast("Marks uploaded."); render(); }
+function shareNote(e) { e.preventDefault(); DB.notes.push({ id: nextId(DB.notes), ...form("noteForm") }); save(); toast("Note shared. Students can get an AI summary and quiz."); render(); }
+function postAssignment(e) { e.preventDefault(); DB.assignments.push({ id: nextId(DB.assignments), ...form("asgForm") }); save(); toast("Assignment posted."); render(); }
+
+/* ================= ADMIN ================= */
+function adminView(u) {
+  const studs = DB.users.filter(x => x.role === "student");
+  let p = 0, t = 0, paid = 0, pend = 0;
+  studs.forEach(s => { Object.values(DB.attendance[s.roll]).forEach(a => { p += a.p; t += a.t; });
+    DB.fees[s.roll].forEach(f => f.paid ? paid += f.amount : pend += f.amount); });
+  const depts = [...new Set(studs.map(s => s.dept))];
+  const deptAtt = depts.map(d => { let dp = 0, dt = 0; studs.filter(s => s.dept === d).forEach(s => Object.values(DB.attendance[s.roll]).forEach(a => { dp += a.p; dt += a.t; })); return dt ? +(100 * dp / dt).toFixed(1) : 0; });
+  const counts = Object.keys(ROLES).map(r => DB.users.filter(x => x.role === r).length);
+  const roleOpts = Object.entries(ROLES).map(([k, r]) => `<option value="${k}">${r.label}</option>`).join("");
+  const open = DB.tickets.filter(x => x.status !== "Resolved");
+  const tickets = open.concat(DB.tickets.filter(x => x.status === "Resolved"));
+  const reportDue = Date.now() - DB.lastReportRun >= 7 * 864e5;
+  const nav = [["pulse","activity","Campus pulse"],["tickets","tools","Complaints board",open.length || ""],["reports","whatsapp","Weekly reports"],
+    ["users","people","Users"],["notice","megaphone","Publish notice"],["grievances","incognito","Grievances"]];
+  const content = `
+  ${reportDue ? `<div class="alert warn"><i class="bi bi-bell"></i> This week's parent reports are due. <a href="#reports"><b>Send them now →</b></a></div>` : ""}
+  <section id="pulse" class="grid g4">
+    ${stat("Overall attendance", (t ? 100 * p / t : 0).toFixed(1) + "%")}${stat("Fees collected", `<span class="ok">${money(paid)}</span>`)}
+    ${stat("Fees pending", `<span class="bad">${money(pend)}</span>`)}${stat("Open complaints", open.length)}
+  </section>
+  <div class="grid g2">
+    <div class="card"><h3>Users by role</h3><canvas id="roleChart" height="200"></canvas></div>
+    <div class="card"><h3>Attendance by department</h3><canvas id="deptChart" height="200"></canvas></div>
+  </div>
+  <section id="tickets" class="card" style="margin-bottom:16px">
+    <h3 style="justify-content:space-between"><span><i class="bi bi-tools"></i> Hostel &amp; maintenance complaints</span><span class="badge ok"><span class="live-dot"></span> Live</span></h3>
+    <p class="muted" style="margin-top:-6px">Raised by students directly or through the AI assistant. Every update you post appears instantly on the student's dashboard.</p>
+    <div class="grid g2" style="margin:0">${tickets.map(x => ticketCard(x, true)).join("") || `<p class="muted">No complaints.</p>`}</div>
+  </section>
+  <section id="reports" class="card" style="margin-bottom:16px">
+    <h3><i class="bi bi-whatsapp" style="color:#25d366"></i> Weekly performance reports to parents</h3>
+    <p class="muted" style="margin-top:-6px">Each week, every student's PDF report goes to their parent's WhatsApp. Last run: <b>${new Date(DB.lastReportRun).toLocaleString("en-IN")}</b>.
+      In this offline demo, the PDF downloads and WhatsApp opens with the message ready. The Flask version sends the PDF automatically through the WhatsApp API.</p>
+    <div class="scroll"><table><tr><th>Student</th><th>Parent WhatsApp</th><th>Attendance</th><th></th></tr>
+      ${studs.map(s => `<tr><td>${s.roll} ${esc(s.name)}</td><td>${esc(s.parentPhone || "—")}</td><td>${summary(s.roll).overall}%</td>
+        <td style="white-space:nowrap"><button class="btn ghost sm" onclick="downloadReport('${s.roll}')"><i class="bi bi-file-earmark-pdf"></i> PDF</button>
+        <button class="btn wa sm" onclick="sendReport('${s.roll}')" ${s.parentPhone ? "" : "disabled"}><i class="bi bi-whatsapp"></i> Send</button></td></tr>`).join("")}</table></div>
+    <button class="btn green" style="margin-top:12px" onclick="sendAllReports()"><i class="bi bi-send"></i> Generate all reports for this week</button>
+    ${DB.reportLog.length ? `<div style="margin-top:12px">${DB.reportLog.slice(-6).reverse().map(r => `<div class="item"><span>${r.roll} → ${esc(r.phone)}</span><span class="muted">${r.at} · ${r.status}</span></div>`).join("")}</div>` : ""}
+  </section>
+  <div class="grid g32">
+    <section id="users" class="card"><h3><i class="bi bi-people"></i> Users</h3>
+      <div class="scroll" style="max-height:300px"><table><tr><th>Login ID</th><th>Name</th><th>Role</th><th>Dept</th></tr>
+      ${DB.users.map(x => `<tr><td>${esc(x.u)}</td><td>${esc(x.name)}</td><td><span class="badge grey">${x.role}</span></td><td>${esc(x.dept || "—")}</td></tr>`).join("")}</table></div>
+      <h3 style="margin-top:16px">Add user</h3>
+      <form id="userForm" onsubmit="addUser(event)">
+        <div class="row"><div><label>Login ID</label><input name="u" required></div><div><label>Full name</label><input name="name" required></div></div>
+        <div class="row"><div><label>Password</label><input name="p" type="password" minlength="6" required></div>
+          <div><label>Role</label><select name="role">${roleOpts}</select></div><div><label>Dept</label><input name="dept" placeholder="CSE"></div></div>
+        <label>Parent WhatsApp (students)</label><input name="parentPhone" placeholder="919876543210">
+        <button class="btn full">Create user</button>
+      </form>
+    </section>
+    <div class="stack">
+      <section id="notice" class="card"><h3><i class="bi bi-megaphone"></i> Publish notice</h3>
+        <form id="noticeForm" onsubmit="publishNotice(event)">
+          <label>Title</label><input name="title" required>
+          <label>Message</label><textarea name="body" rows="2" required></textarea>
+          <label>Send to</label><select name="target"><option value="all">Everyone</option>${roleOpts}</select>
+          <button class="btn full">Publish</button>
+        </form></section>
+      <section id="grievances" class="card"><h3><i class="bi bi-incognito"></i> Anonymous grievances</h3>
+        ${DB.grievances.slice().reverse().map(g => `<div style="border-bottom:1px solid var(--border);padding:8px 0;font-size:.88rem">
+          <b>${g.token}</b> · ${esc(g.category)}<br>${esc(g.message)}
+          <select onchange="setGrievance('${g.token}', this.value)" style="margin-top:6px">${["Open", "In Progress", "Resolved"].map(s => `<option ${s === g.status ? "selected" : ""}>${s}</option>`).join("")}</select></div>`).join("") || `<p class="muted">No grievances.</p>`}
+      </section>
+    </div>
+  </div>`;
+  return { html: shell(u, nav, content), after() {
+    chart("roleChart", { type: "doughnut", data: { labels: Object.values(ROLES).map(r => r.label), datasets: [{ data: counts }] } });
+    chart("deptChart", { type: "bar", data: { labels: depts, datasets: [{ label: "Attendance %", data: deptAtt, backgroundColor: "#4f46e5" }] },
+      options: { plugins: { legend: { display: false } }, scales: { y: { min: 0, max: 100 } } } });
+  } };
+}
+function updateTicket(e, id) {
+  e.preventDefault();
+  const f = new FormData(e.target), t = DB.tickets.find(x => x.id === id), status = f.get("status"), at = stamp();
+  t.status = status; t.updated = at;
+  t.updates.push({ status, message: f.get("message").trim() || `Status changed to ${status}.`, at, by: user(me).name });
+  save(); toast(`Complaint #${id} updated. The student sees it instantly.`); render();
+}
+function addUser(e) { e.preventDefault(); const f = form("userForm");
+  if (user(f.u)) return toast("That login ID already exists.");
+  const nu = { u: f.u, p: f.p, role: f.role, name: f.name, dept: f.dept };
+  if (f.role === "student") {
+    Object.assign(nu, { roll: f.u, year: 1, cgpa: 0, xp: 0, blood: "-", parentPhone: f.parentPhone.replace(/\D/g, "") });
+    DB.attendance[f.u] = Object.fromEntries(DB.subjects.map(s => [s.code, { p: 0, t: 0 }]));
+    DB.marks[f.u] = []; DB.sgpa[f.u] = []; DB.fees[f.u] = [];
+  }
+  DB.users.push(nu); save(); toast(`User ${f.u} created.`); render(); }
+function publishNotice(e) { e.preventDefault(); DB.notices.push({ ...form("noticeForm"), date: today() }); save(); toast("Notice published."); render(); }
+function setGrievance(token, status) { DB.grievances.find(g => g.token === token).status = status; save(); toast("Grievance updated."); }
+
+/* ================= WEEKLY PDF REPORT ================= */
+function buildReport(roll) {
+  const st = user(roll), s = summary(roll), { jsPDF } = window.jspdf, doc = new jsPDF();
+  const end = new Date(), start = new Date(Date.now() - 6 * 864e5), fmt = d => d.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+  doc.setFillColor(79, 70, 229); doc.rect(0, 0, 210, 32, "F");
+  doc.setTextColor(255); doc.setFont("helvetica", "bold"); doc.setFontSize(18); doc.text("CampusVerse - Weekly Performance Report", 12, 15);
+  doc.setFont("helvetica", "normal"); doc.setFontSize(10); doc.text(`Week: ${fmt(start)} to ${fmt(end)}`, 12, 24);
+  doc.setTextColor(31, 41, 55);
+  let y = 44;
+  const heading = t => { y += 4; doc.setFont("helvetica", "bold"); doc.setFontSize(13); doc.text(t, 12, y); y += 7; doc.setFont("helvetica", "normal"); doc.setFontSize(10); };
+  const row = (cells, xs, color) => { cells.forEach((c, i) => { doc.setTextColor(...((color && color[i]) || [31, 41, 55])); doc.text(String(c), xs[i], y); });
+    doc.setTextColor(31, 41, 55); doc.setDrawColor(229, 231, 235); doc.line(12, y + 2, 198, y + 2); y += 7; };
+  heading("Student");
+  doc.text(`${st.name}  |  Roll: ${st.roll}  |  ${st.dept} Year ${st.year}  |  CGPA: ${st.cgpa}`, 12, y); y += 6;
+  heading(`Attendance (overall ${s.overall}%)`);
+  doc.setFont("helvetica", "bold"); row(["Code", "Subject", "Attended", "Status"], [12, 35, 105, 145]); doc.setFont("helvetica", "normal");
+  s.att.forEach(a => row([a.code, a.name, `${a.p}/${a.t} (${a.pct}%)`, a.need ? `Needs next ${a.need} classes` : "Safe (75%+)"], [12, 35, 105, 145],
+    [null, null, null, a.need ? [220, 38, 38] : [22, 163, 74]]));
+  heading("Marks");
+  doc.setFont("helvetica", "bold"); row(["Code", "Subject", "Exam", "Score"], [12, 35, 105, 145]); doc.setFont("helvetica", "normal");
+  s.marks.forEach(m => { const p = Math.round(m.score / m.max * 100); row([m.code, subName(m.code), m.exam, `${m.score}/${m.max} (${p}%)`], [12, 35, 105, 145], [null, null, null, p < 50 ? [220, 38, 38] : null]); });
+  heading("This week");
+  const quizzes = DB.quizzes.filter(q => q.roll === roll && q.status === "Submitted").length;
+  const openT = DB.tickets.filter(t => t.roll === roll && t.status !== "Resolved").length;
+  [`Pending assignments: ${dueAssignments().length}`, `AI quizzes completed: ${quizzes}`, `Fees pending: Rs. ${s.pending.toLocaleString("en-IN")}`,
+   `Open hostel / maintenance complaints: ${openT}`, ...dueAssignments().map(a => `  - ${a.code}: ${a.title} (due ${a.due})`)].forEach(l => { doc.text(l, 12, y); y += 6; });
+  y += 6; doc.setFont("helvetica", "italic"); doc.setFontSize(9); doc.setTextColor(107, 114, 128);
+  doc.text("This report was generated automatically by CampusVerse. For questions, contact the department office.", 12, y);
+  return { doc, file: `${roll}_weekly_report_${today()}.pdf`, st, s };
+}
+function downloadReport(roll) {
+  if (!window.jspdf) return toast("PDF library didn't load. Check your internet connection.");
+  const { doc, file } = buildReport(roll); doc.save(file); toast("Report PDF downloaded.");
+}
+function sendReport(roll, quiet) {
+  if (!window.jspdf) return toast("PDF library didn't load. Check your internet connection.");
+  const { doc, file, st, s } = buildReport(roll);
+  doc.save(file);
+  const risky = s.att.filter(a => a.need).map(a => a.code);
+  const msg = `CampusVerse weekly report for ${st.name} (${st.roll})\n` +
+    `Attendance: ${s.overall}%${risky.length ? ` (low in ${risky.join(", ")})` : ""}\nAverage marks: ${s.avg}%\nFees pending: Rs. ${s.pending.toLocaleString("en-IN")}\n` +
+    `Full PDF report attached: ${file}`;
+  if (!quiet) window.open(`https://wa.me/${st.parentPhone}?text=${encodeURIComponent(msg)}`, "_blank");
+  DB.reportLog.push({ roll, phone: st.parentPhone, at: stamp(), status: quiet ? "PDF generated" : "Opened in WhatsApp" });
+  save(); if (!quiet) { toast("PDF downloaded. Attach it in the WhatsApp chat that opened."); render(); }
+}
+function sendAllReports() {
+  DB.users.filter(x => x.role === "student" && x.parentPhone).forEach(s => sendReport(s.roll, true));
+  DB.lastReportRun = Date.now(); save(); toast("All weekly reports generated."); render();
+}
+
+/* ================= ALUMNI & RECRUITER ================= */
+function jobForm(heading) {
+  return `<section id="post" class="card" style="margin-bottom:16px"><h3><i class="bi bi-plus-circle"></i> ${heading}</h3>
+    <form id="jobForm" onsubmit="postJob(event)">
+      <div class="row"><div><label>Role title</label><input name="title" required></div><div><label>Company</label><input name="company" required></div></div>
+      <label>Details</label><textarea name="desc" rows="2" required placeholder="Location, stipend, skills"></textarea>
+      <div class="row"><div><label>Minimum CGPA</label><input name="minCgpa" type="number" step="0.1" min="0" max="10" value="0"></div><button class="btn" style="flex:0">Post</button></div>
+    </form></section>`;
+}
+function postJob(e) { e.preventDefault(); const f = form("jobForm"), u = user(me);
+  DB.jobs.push({ id: nextId(DB.jobs), by: me, ...f, minCgpa: +f.minCgpa || 0, kind: u.role === "alumni" ? "Referral" : "Drive" });
+  save(); toast("Opportunity posted for students."); render(); }
+
+function alumniView(u) {
+  const mine = DB.jobs.filter(j => j.by === u.u);
+  const nav = [["post","plus-circle","Post referral"],["mine","list-ul","My posts"],["notices","megaphone","Notices"]];
+  const content = `${jobForm("Post a job / referral for juniors")}
+  <section id="mine" class="card" style="margin-bottom:16px"><h3><i class="bi bi-list-ul"></i> My posts</h3>
+    ${mine.map(j => { const n = DB.applications.filter(a => a.jobId === j.id).length;
+      return `<div class="item"><span><b>${esc(j.title)}</b> · ${esc(j.company)} · Min CGPA ${j.minCgpa}</span><span class="badge">${n} applicant${n === 1 ? "" : "s"}</span></div>`; }).join("")
+      || `<p class="muted">You haven't posted anything yet. Your juniors would love a referral!</p>`}
+  </section>${noticesCard("alumni")}`;
+  return { html: shell(u, nav, content) };
+}
+
+let filter = { min: 0, dept: "" };
+function recruiterView(u) {
+  const studs = DB.users.filter(x => x.role === "student");
+  const cands = studs.filter(s => s.cgpa >= filter.min && (!filter.dept || s.dept === filter.dept)).sort((a, b) => b.cgpa - a.cgpa);
+  const myJobs = DB.jobs.filter(j => j.by === u.u).map(j => j.id);
+  const apps = DB.applications.filter(a => myJobs.includes(a.jobId));
+  const nav = [["search","search","Find candidates"],["applicants","person-check","Applicants"],["post","plus-circle","Post drive"],["notices","megaphone","Notices"]];
+  const content = `
+  <section id="search" class="card" style="margin-bottom:16px"><h3><i class="bi bi-search"></i> Find candidates</h3>
+    <div class="row" style="margin-bottom:10px">
+      <div><label>Min CGPA</label><input type="number" step="0.1" value="${filter.min}" onchange="filter.min=+this.value;render()"></div>
+      <div><label>Department</label><select onchange="filter.dept=this.value;render()"><option value="">All</option>
+        ${[...new Set(studs.map(s => s.dept))].map(d => `<option ${d === filter.dept ? "selected" : ""}>${d}</option>`).join("")}</select></div>
+    </div>
+    <div class="scroll"><table><tr><th>Roll</th><th>Name</th><th>Dept</th><th>CGPA</th><th>XP</th></tr>
+    ${cands.map(c => `<tr><td>${c.roll}</td><td>${esc(c.name)}</td><td>${c.dept}</td><td>${c.cgpa}</td><td>${c.xp}</td></tr>`).join("") || `<tr><td colspan="5">No students match.</td></tr>`}</table></div>
+  </section>
+  <section id="applicants" class="card" style="margin-bottom:16px"><h3><i class="bi bi-person-check"></i> Applicants to my drives</h3>
+    ${apps.map(a => { const s = user(a.roll), j = DB.jobs.find(x => x.id === a.jobId);
+      return `<div class="item"><span><b>${esc(j.title)}</b> — ${s.roll} ${esc(s.name)} (CGPA ${s.cgpa})</span>
+        <select style="width:auto" onchange="setApp(${a.id}, this.value)">${["Applied", "Shortlisted", "Interview", "Selected", "Rejected"].map(x => `<option ${x === a.status ? "selected" : ""}>${x}</option>`).join("")}</select></div>`; }).join("")
+      || `<p class="muted">No applications yet. Tip: log in as a student and apply!</p>`}
+  </section>
+  ${jobForm("Post a placement drive")}${noticesCard("recruiter")}`;
+  return { html: shell(u, nav, content) };
+}
+function setApp(id, status) { DB.applications.find(a => a.id === id).status = status; save(); toast("Status updated to " + status + "."); }
+
+/* ================= RENDER ================= */
+const VIEWS = { student: studentView, faculty: facultyView, admin: adminView, alumni: alumniView, recruiter: recruiterView };
+function chart(id, cfg) { if (window.Chart) charts.push(new Chart(document.getElementById(id), cfg)); }
+function render() {
+  charts.forEach(c => c.destroy()); charts = [];
+  const u = me && user(me);
+  if (!u) return renderLogin();
+  const scroll = window.scrollY, view = VIEWS[u.role](u);
+  $("#root").innerHTML = view.html;
+  view.after?.();
+  window.scrollTo(0, scroll);
+}
+function toggleTheme() {
+  const t = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+  document.documentElement.dataset.theme = t; try { localStorage.setItem("cv-theme", t); } catch (e) {}
+}
+try { document.documentElement.dataset.theme = localStorage.getItem("cv-theme") || "light"; } catch (e) {}
+
+load(); save(); render();
+</script>
+</body>
+</html>

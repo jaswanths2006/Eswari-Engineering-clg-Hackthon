@@ -1,0 +1,7 @@
+Flask>=3.0
+pymongo[srv]>=4.6
+mongomock>=4.1
+python-dotenv>=1.0
+fpdf2>=2.7
+pypdf>=4.0
+requests>=2.31

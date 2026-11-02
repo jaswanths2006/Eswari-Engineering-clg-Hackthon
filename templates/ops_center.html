@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+{% import "_ops.html" as ops with context %}
+{% block title %} · Operations Center{% endblock %}
+{% block nav %}
+  {% for id, icon, label in [('kpi','speedometer2','Overview'),('scenarios','lightning','Disruption scenarios'),('queue','list-ol','Priority queue'),
+      ('incidents','diagram-3','Linked incidents'),('techs','people','Technicians'),('rooms','door-open','Rooms & relocations'),
+      ('approvals','check2-square','Approvals'),('inventory','box-seam','Inventory'),('analytics','graph-up','Analytics'),('history','clock-history','Recently closed')] %}
+    <li><a class="nav-link" href="#{{ id }}"><i class="bi bi-{{ icon }}"></i> {{ label }}</a></li>
+  {% endfor %}
+  <li><a class="nav-link" href="{{ url_for('ops.integrations') }}"><i class="bi bi-envelope-at"></i> Email &amp; webhooks</a></li>
+  {% if u.role == 'admin' %}<li><a class="nav-link" href="{{ url_for('admin_dashboard') }}"><i class="bi bi-arrow-left"></i> System admin</a></li>{% endif %}
+{% endblock %}
+{% block content %}
+<section id="kpi" class="row g-3 mb-4">
+  {% for label, val, cls in [('Open requests', stats.open, ''), ('P1 / P2 open', stats.by_priority.P1 ~ ' / ' ~ stats.by_priority.P2, 'text-danger'),
+      ('SLA compliance', (stats.sla_compliance ~ '%') if stats.sla_compliance is not none else '—', 'text-success'),
+      ('SLA breached (open)', stats.breached_open, 'text-danger'), ('Blocked', stats.by_state['Blocked'], 'text-warning'),
+      ('Needs info', stats.by_state['Needs Info'], ''), ('Avg resolution', (stats.avg_resolution_h ~ 'h') if stats.avg_resolution_h else '—', ''),
+      ('Stock shortages', stats.shortages|length, 'text-danger')] %}
+    <div class="col-6 col-lg-3"><div class="card p-3 stat"><div class="small text-body-secondary">{{ label }}</div><div class="val {{ cls }}">{{ val }}</div></div></div>
+  {% endfor %}
+</section>
+
+<section id="scenarios" class="card p-3 mb-4">
+  <h5><i class="bi bi-lightning-charge text-warning"></i> Disruption scenarios</h5>
+  <p class="small text-body-secondary mb-2">Each button feeds realistic events into the real engine; watch the queue, rooms, approvals and notifications react.</p>
+  <div class="d-flex flex-wrap gap-2">
+    {% for name, label, cls in [('exam_power','1 · Exam hall power failure before an exam','danger'),('tech_sick','2 · Busiest technician calls in sick','warning'),
+        ('wifi_outage','3 · Wi-Fi outage reported by 5 students','primary'),('part_out','4 · Critical part out of stock','dark'),('sla','5 · Push a job past its SLA','secondary')] %}
+      <form method="post" action="{{ url_for('ops.scenario', name=name) }}" onsubmit="this.querySelector('button').innerHTML='Running…'">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="btn btn-sm btn-outline-{{ cls }}">{{ label }}</button></form>
+    {% endfor %}
+  </div>
+</section>
+
+<section id="queue" class="card p-3 mb-4">
+  <div class="d-flex justify-content-between align-items-center">
+    <h5 class="mb-0"><i class="bi bi-list-ol"></i> Priority queue <span class="badge bg-secondary">{{ queue|length }}</span></h5>
+    <details><summary class="small text-primary">+ Log a report</summary><div class="mt-2" style="min-width:360px">{{ ops.report_form(rooms, categories) }}</div></details>
+  </div>
+  <p class="small text-body-secondary">Ordered by priority score (AI severity + exams/bookings affected + number of reporters + safety), then SLA deadline. Assignment is automatic by skill, shift, workload and availability.</p>
+  {{ ops.queue_table(queue, show_actions=True, techs=techs, inventory=inventory) }}
+</section>
+
+<div class="row g-3">
+  <div class="col-xl-6">
+    <section id="incidents" class="card p-3 mb-4">
+      <h5><i class="bi bi-diagram-3"></i> Linked incidents</h5>
+      <p class="small text-body-secondary">Open complaints of the same type in the same building within 24h are correlated; 4+ reports or 3+ rooms make a major incident.</p>
+      {% for gr in groups %}
+        <div class="border rounded p-2 mb-2 small {{ 'border-danger' if gr.major }}">
+          <div class="d-flex justify-content-between"><b>#{{ gr.id }} {{ gr.category }} · Building {{ gr.building }}</b>
+            {% if gr.major %}<span class="badge bg-danger">MAJOR</span>{% endif %}</div>
+          <div>{{ gr.summary }}</div>
+          <div class="text-body-secondary">{{ gr.reports }} reports · rooms {{ (gr.rooms or [])|join(', ') }}</div>
+        </div>
+      {% else %}<p class="small text-body-secondary mb-0">No linked incidents.</p>{% endfor %}
+    </section>
+    <section id="approvals" class="card p-3 mb-4">
+      <h5><i class="bi bi-check2-square"></i> Approvals</h5>
+      <p class="small text-body-secondary">Overrides and costly repairs. You can never approve your own request; constraints are re-checked at approval time.</p>
+      {{ ops.approvals_list(approvals) }}
+    </section>
+  </div>
+  <div class="col-xl-6">
+    <section id="techs" class="card p-3 mb-4">
+      <h5><i class="bi bi-people"></i> Technicians</h5>
+      <table class="table table-sm align-middle mb-0"><thead><tr><th>Name</th><th>Skills</th><th>Shift</th><th>Load</th><th></th></tr></thead><tbody>
+      {% for x in techs %}
+        <tr class="{{ 'table-secondary' if not x.available }}">
+          <td class="small"><b>{{ x.name }}</b> {% if x.on_shift and x.available %}<span class="badge bg-success">on shift</span>{% elif not x.available %}<span class="badge bg-danger">unavailable</span>{% endif %}</td>
+          <td class="small">{{ x.skills|join(', ') }}</td>
+          <td class="small">{{ '%02d'|format(x.shift[0]) }}–{{ '%02d'|format(x.shift[1]) }}</td>
+          <td style="min-width:90px"><div class="progress" style="height:8px"><div class="progress-bar {{ 'bg-danger' if x.load >= 10 else 'bg-warning' if x.load >= 6 else 'bg-success' }}" style="width: {{ [x.load * 10, 100]|min }}%"></div></div><span class="small">{{ x.load }}/10</span></td>
+          <td><form method="post" action="{{ url_for('ops.tech_availability', tech_id=x.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <input type="hidden" name="available" value="{{ '0' if x.available else '1' }}">
+            <button class="btn btn-sm {{ 'btn-outline-danger' if x.available else 'btn-outline-success' }}">{{ 'Mark sick' if x.available else 'Back' }}</button></form></td>
+        </tr>
+      {% endfor %}</tbody></table>
+    </section>
+    <section id="rooms" class="card p-3 mb-4">
+      <h5><i class="bi bi-door-open"></i> Rooms &amp; relocations</h5>
+      <div class="d-flex flex-wrap gap-1 mb-2">
+        {% for r in rooms %}<span class="badge {{ 'bg-danger' if r.status == 'maintenance' else 'bg-success-subtle text-success-emphasis' }}" title="{{ r.name }} ({{ r.capacity }})">{{ r.code }}</span>{% endfor %}
+      </div>
+      {% for r in rooms if r.status == 'maintenance' %}
+        <form method="post" action="{{ url_for('ops.room_status', room_id=r.id) }}" class="small mb-1"><input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <b>{{ r.code }}</b> out of service <input type="hidden" name="status" value="available"><button class="btn btn-link btn-sm p-0">mark available</button></form>
+      {% endfor %}
+      <div class="small fw-semibold mt-2">Affected bookings (next 7 days)</div>
+      {% for b in relocations %}
+        <div class="small border-bottom py-1">{% if b.kind == 'exam' %}<span class="badge bg-danger">EXAM</span>{% endif %} {{ b.date }} {{ b.start }}–{{ b.end }} <b>{{ b.title }}</b>:
+          {% if b.conflict %}<span class="text-danger">{{ b.conflict }}</span>{% else %}{{ b.from_code }} → <b>{{ b.room_code }}</b>{% endif %}</div>
+      {% else %}<div class="small text-body-secondary">None.</div>{% endfor %}
+    </section>
+  </div>
+</div>
+
+<section id="inventory" class="card p-3 mb-4">
+  <h5><i class="bi bi-box-seam"></i> Inventory</h5>
+  {{ ops.inventory_table(inventory) }}
+</section>
+
+<section id="analytics" class="card p-3 mb-4">
+  <h5><i class="bi bi-graph-up"></i> Analytics</h5>
+  <div class="row g-3">
+    <div class="col-md-4"><h6 class="small">Open by category</h6><canvas id="catChart" height="200"></canvas></div>
+    <div class="col-md-4"><h6 class="small">Technician utilisation (%)</h6><canvas id="techChart" height="200"></canvas></div>
+    <div class="col-md-4"><h6 class="small">Room utilisation, next 7 days (%)</h6><canvas id="roomChart" height="200"></canvas></div>
+    <div class="col-md-6"><h6 class="small">Recurring problems (3+ in 60 days)</h6>
+      {% for r in stats.recurring %}<div class="small"><span class="badge bg-warning text-dark">{{ r.count }}×</span> {{ r.category }} in <b>{{ r.room }}</b> — consider replacing the equipment</div>
+      {% else %}<div class="small text-body-secondary">None.</div>{% endfor %}</div>
+    <div class="col-md-6"><h6 class="small">Shortages</h6>
+      {% for i in stats.shortages %}<div class="small"><span class="badge bg-danger">{{ i.stock - i.reserved }} free</span> {{ i.name }} (reorder at {{ i.reorder_level }}, on order {{ i.on_order }})</div>
+      {% else %}<div class="small text-body-secondary">None.</div>{% endfor %}
+      <h6 class="small mt-2">Reports by channel</h6>
+      {% for k, v in stats.reports_by_source.items() %}<span class="badge bg-light text-dark border">{{ k }}: {{ v }}</span> {% endfor %}</div>
+  </div>
+</section>
+
+<section id="history" class="card p-3 mb-4">
+  <h5><i class="bi bi-clock-history"></i> Recently closed / merged</h5>
+  {{ ops.queue_table(recent_done, compact=True) }}
+</section>
+{% endblock %}
+{% block scripts %}
+<script>
+  const S = {{ stats|tojson }};
+  new Chart(catChart, { type: 'doughnut', data: { labels: Object.keys(S.by_category), datasets: [{ data: Object.values(S.by_category) }] } });
+  new Chart(techChart, { type: 'bar', data: { labels: S.tech_util.map(t => t.name), datasets: [{ data: S.tech_util.map(t => t.pct),
+    backgroundColor: S.tech_util.map(t => !t.available ? '#4b5375' : t.pct >= 80 ? '#ff3b6b' : '#00f0ff') }] },
+    options: { plugins: { legend: { display: false } }, scales: { y: { min: 0, max: 100 } } } });
+  new Chart(roomChart, { type: 'bar', data: { labels: S.room_util.map(r => r.code), datasets: [{ data: S.room_util.map(r => r.pct), backgroundColor: '#ff2bd6' }] },
+    options: { indexAxis: 'y', plugins: { legend: { display: false } }, scales: { x: { min: 0, max: 100 } } } });
+  setTimeout(() => location.reload(), 60000);  // live view: refresh every minute
+</script>
+{% endblock %}

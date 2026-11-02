@@ -1,0 +1,379 @@
+{% extends "base.html" %}
+{% block title %} · Student{% endblock %}
+{% block nav %}
+  {% for id, icon, label in [('overview','speedometer2','Overview'),('ai','robot','AI Assistant'),
+      ('tickets','tools','My complaints (live)'),('attendance','calendar-check','Attendance'),
+      ('marks','bar-chart','Marks'),('cgpa','graph-up','SGPA trend'),('assignments','journal-text','Assignments'),
+      ('courses','journal-bookmark','My courses'),('choose','person-check','Choose faculty'),('myrequests','inbox','My requests'),('notes','folder2-open','Notes & AI quiz'),('fees','wallet2','Fees'),('leave','envelope-paper','Leave / OD'),
+      ('career','briefcase','Placements'),('grievance','incognito','Grievance'),('idcard','person-vcard','Digital ID'),
+      ('profile','telephone','Parent WhatsApp'),('notices','megaphone','Notices')] %}
+    <li><a class="nav-link" href="#{{ id }}"><i class="bi bi-{{ icon }}"></i> {{ label }}</a></li>
+  {% endfor %}
+{% endblock %}
+{% block content %}
+<style>
+  .chat-box { height: 360px; overflow-y: auto; background: var(--bs-tertiary-bg); border-radius: .75rem; padding: .75rem; }
+  .msg { max-width: 85%; padding: .5rem .75rem; border-radius: .75rem; margin-bottom: .5rem; white-space: pre-wrap; font-size: .9rem; }
+  .msg.user { background: var(--brand); color: #fff; margin-left: auto; }
+  .msg.assistant { background: var(--bs-body-bg); border: 1px solid var(--bs-border-color); }
+  .steps { display: flex; gap: 4px; }
+  .steps div { flex: 1; height: 6px; border-radius: 99px; background: var(--bs-secondary-bg); }
+  .steps div.on { background: #16a34a; }
+  .timeline { border-left: 2px solid var(--bs-border-color); margin-left: .4rem; padding-left: .8rem; }
+  .ai-summary { white-space: pre-wrap; font-size: .85rem; background: var(--bs-tertiary-bg); border-radius: .5rem; padding: .6rem; margin-top: .4rem; }
+</style>
+
+<section id="overview" class="row g-3 mb-4">
+  {% set lvl = u.xp // 100 + 1 %}
+  <div class="col-6 col-xl-3"><div class="card p-3 stat"><div class="small text-body-secondary">Attendance</div>
+    <div class="val {{ 'text-success' if overall >= 75 else 'text-danger' }}">{{ overall }}%</div></div></div>
+  <div class="col-6 col-xl-3"><div class="card p-3 stat"><div class="small text-body-secondary">CGPA</div>
+    <div class="val">{{ u.cgpa }}</div></div></div>
+  <div class="col-6 col-xl-3"><div class="card p-3 stat"><div class="small text-body-secondary">Fees pending</div>
+    <div class="val">₹{{ "{:,}".format(fee_pending) }}</div></div></div>
+  <div class="col-6 col-xl-3"><div class="card p-3 stat brand-grad"><div class="small">Level {{ lvl }} · Rank #{{ rank }} in {{ u.dept }}</div>
+    <div class="val">{{ u.xp }} XP</div>
+    <div class="progress bg-white bg-opacity-25" style="height:6px"><div class="progress-bar bg-white" style="width: {{ u.xp % 100 }}%"></div></div></div></div>
+</section>
+
+<div class="row g-3">
+  <div class="col-xl-7">
+    <section id="ai" class="card p-3 mb-4">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <h5 class="mb-0"><i class="bi bi-robot text-primary"></i> AI Assistant</h5>
+        <button class="btn btn-sm btn-outline-secondary" onclick="clearChat()">Clear chat</button>
+      </div>
+      <div class="chat-box" id="chatBox">
+        <div class="msg assistant">Hi {{ u.name.split(' ')[0] }}! 👋 Ask me about your attendance, marks, fees or assignments, clear a doubt from your notes, or tell me about a hostel / maintenance problem and I'll raise a complaint for you.</div>
+        {% for m in chat %}<div class="msg {{ m.role }}">{{ m.content }}</div>{% endfor %}
+      </div>
+      <div class="d-flex flex-wrap gap-1 my-2">
+        {% for s in ["What's my attendance status?", "Which assignments are due?", "Explain SQL joins from my notes", "The fan in my hostel room is not working"] %}
+          <button class="btn btn-sm btn-outline-primary" onclick="ask(this.textContent)">{{ s }}</button>
+        {% endfor %}
+      </div>
+      <form class="input-group" onsubmit="event.preventDefault(); ask(chatInput.value)">
+        <input id="chatInput" class="form-control" placeholder="Ask anything about your academics or report an issue…" autocomplete="off">
+        <button class="btn btn-primary" id="sendBtn"><i class="bi bi-send"></i></button>
+      </form>
+    </section>
+  </div>
+  <div class="col-xl-5">
+    <section id="tickets" class="card p-3 mb-4">
+      <div class="d-flex justify-content-between align-items-center">
+        <h5 class="mb-0"><i class="bi bi-tools"></i> My complaints</h5>
+        <span class="badge bg-success-subtle text-success-emphasis"><span class="spinner-grow spinner-grow-sm" style="width:.5rem;height:.5rem"></span> Live</span>
+      </div>
+      <p class="small text-body-secondary mb-2">Hostel, classroom &amp; maintenance reports. AI reads your report, checks if someone already reported it, sets the priority and assigns a technician. Updates appear here automatically.</p>
+      <div id="ticketList" style="max-height:360px;overflow-y:auto"></div>
+      <details class="mt-2">
+        <summary class="small text-primary">Report a problem with the form</summary>
+        <div class="mt-2">{% import "_ops.html" as ops with context %}{{ ops.report_form(rooms, categories) }}</div>
+      </details>
+    </section>
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-xl-8">{% include "_academics.html" %}</div>
+  <div class="col-xl-4">
+    <section class="card p-3 mb-4">
+      <h5><i class="bi bi-trophy"></i> Leaderboard</h5>
+      <ol class="mb-2">{% for s in leaderboard %}<li class="{{ 'fw-bold text-primary' if s.roll == u.roll else '' }}">{{ s.name }} — {{ s.xp }} XP</li>{% endfor %}</ol>
+      <div class="d-flex flex-wrap gap-1">
+        {% if overall >= 75 %}<span class="badge bg-success">🎯 Regular Attendee</span>{% endif %}
+        {% if u.cgpa >= 8.5 %}<span class="badge bg-primary">🧠 Topper Club</span>{% endif %}
+        {% if u.xp >= 400 %}<span class="badge bg-warning text-dark">⚡ XP 400+</span>{% endif %}
+      </div>
+    </section>
+    <section id="cgpa" class="card p-3 mb-4">
+      <h5><i class="bi bi-graph-up"></i> SGPA trend</h5>
+      <canvas id="sgpaChart" height="200"></canvas>
+    </section>
+    <section id="assignments" class="card p-3 mb-4">
+      <h5><i class="bi bi-journal-text"></i> Assignments due</h5>
+      {% for a in assignments %}
+        <div class="border-bottom py-2 small">
+          <div class="d-flex justify-content-between"><span><b>{{ a.code }}</b> {{ a.title }}</span>
+            <span class="countdown text-danger text-nowrap" data-due="{{ a.due }}">{{ a.due }}</span></div>
+          {% if a.content %}<button class="btn btn-link btn-sm p-0" onclick="summarize('assignment', {{ a.id }}, this)"><i class="bi bi-stars"></i> AI explain</button>
+            <div class="ai-summary d-none" id="sum-assignment-{{ a.id }}"></div>{% endif %}
+        </div>
+      {% else %}<p class="small text-body-secondary mb-0">Nothing due. 🎉</p>{% endfor %}
+    </section>
+  </div>
+</div>
+
+<section id="courses" class="card p-3 mb-4">
+  <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+    <h5 class="mb-0"><i class="bi bi-journal-bookmark"></i> My courses &amp; faculty</h5>
+    <span>
+      <span class="badge {{ 'bg-success' if courses.open else 'bg-secondary' }}">Registration {{ 'open' if courses.open else 'closed' }}</span>
+      <span class="badge bg-primary">{{ courses.credits }} credits</span>
+      <span class="badge {{ 'bg-success' if courses.chosen >= courses.required else 'bg-warning text-dark' }}">Electives {{ courses.chosen }}/{{ courses.required }}</span>
+    </span>
+  </div>
+  <p class="small text-body-secondary mt-1">Your current subjects and faculty. To pick a different faculty or an elective, use <a href="#choose">Choose subject &amp; faculty</a>; the faculty member must accept your request.</p>
+  <div class="table-responsive"><table class="table table-sm align-middle">
+    <thead><tr><th>Subject</th><th>Type</th><th>Credits</th><th>Faculty</th><th>Section</th></tr></thead><tbody>
+    {% for c in courses.taking %}
+      <tr><td><b>{{ c.code }}</b> {{ c.subject }}</td><td><span class="badge {{ 'bg-dark' if c.kind == 'core' else 'bg-info text-dark' }}">{{ c.kind }}</span></td>
+        <td>{{ c.credits }}</td><td>{{ c.faculty }}</td><td>{{ c.section }}</td></tr>
+    {% else %}<tr><td colspan="5" class="text-body-secondary small">No courses yet.</td></tr>{% endfor %}
+  </tbody></table></div>
+</section>
+
+<section id="choose" class="card p-3 mb-4">
+  <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+    <h5 class="mb-0"><i class="bi bi-person-check"></i> Choose subject &amp; faculty</h5>
+    <span>
+      <span class="badge {{ 'bg-success' if courses.open else 'bg-secondary' }}">Registration {{ 'open' if courses.open else 'closed' }}</span>
+      <span class="badge {{ 'bg-success' if courses.chosen >= courses.required else 'bg-warning' }}">Electives {{ courses.chosen }}/{{ courses.required }}{% if courses.new_pending %} (+{{ courses.new_pending }} pending){% endif %}</span>
+    </span>
+  </div>
+  <div class="small text-body-secondary mt-2 mb-3 mono">
+    1. pick a subject → 2. pick the faculty's section → 3. send request → 4. that faculty accepts → you're enrolled
+  </div>
+  <div class="row g-3">
+  {% for c in courses.catalog %}
+    <div class="col-md-6 col-xl-4"><div class="border rounded p-3 h-100 {{ 'border-success' if c.chosen }} {{ 'border-warning' if c.pending }}">
+      <div class="d-flex justify-content-between gap-2">
+        <div><b>{{ c.code }}</b> {{ c.subject }}</div>
+        <span class="badge {{ 'bg-dark' if c.kind == 'core' else 'bg-info' }}">{{ c.kind }} · {{ c.credits }}cr</span>
+      </div>
+      {% if c.pending %}<div class="small mt-1 text-warning"><i class="bi bi-hourglass-split"></i> Waiting for {{ c.pending.faculty_name }} (sec {{ c.pending.section }})</div>
+      {% elif c.last and c.last.status == 'Rejected' %}<div class="small mt-1 text-danger"><i class="bi bi-x-circle"></i> {{ c.last.faculty_name }} declined: {{ c.last.reason }}</div>{% endif %}
+      {% for o in c.sections %}
+        <div class="d-flex justify-content-between align-items-center small border-top mt-2 pt-2 gap-2">
+          <div><i class="bi bi-person-video3 text-primary"></i> <b>{{ o.faculty }}</b> · sec {{ o.section }}
+            <div class="{{ 'text-danger' if o.seats_left <= 0 else 'text-body-secondary' }}">{{ o.seats_left }}/{{ o.capacity }} seats free</div></div>
+          {% if c.chosen == o.id %}<span class="badge bg-success">Enrolled</span>
+          {% elif c.pending and c.pending.offering_id == o.id %}
+            <form method="post" action="{{ url_for('academics.cancel_route', request_id=c.pending.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+              <button class="btn btn-sm btn-outline-warning">Cancel</button></form>
+          {% elif courses.open and o.seats_left > 0 and (c.chosen or c.kind == 'elective') %}
+            <form method="post" action="{{ url_for('academics.request_route', offering_id=o.id) }}" class="d-flex gap-1">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+              <input name="note" class="form-control form-control-sm" style="width:110px" placeholder="Note (optional)">
+              <button class="btn btn-sm btn-primary">{{ 'Request switch' if c.chosen else 'Request' }}</button></form>
+          {% elif o.seats_left <= 0 %}<span class="badge bg-secondary">Full</span>{% endif %}
+        </div>
+      {% endfor %}
+      {% if c.chosen and c.kind == 'elective' and courses.open %}
+        <form method="post" action="{{ url_for('academics.drop_route', subject_id=c.subject_id) }}" class="mt-2"><input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <button class="btn btn-link btn-sm p-0 text-danger">Drop this elective</button></form>
+      {% endif %}
+    </div></div>
+  {% endfor %}
+  </div>
+</section>
+
+<section id="myrequests" class="card p-3 mb-4">
+  <h5><i class="bi bi-inbox"></i> My requests</h5>
+  <div class="table-responsive"><table class="table table-sm align-middle mb-0">
+    <thead><tr><th>Subject</th><th>Faculty</th><th>Type</th><th>Status</th><th>Faculty's reply</th><th>Sent</th></tr></thead><tbody>
+    {% for r in courses.requests %}
+      <tr><td><b>{{ r.code }}</b> {{ r.subject }}</td><td>{{ r.faculty_name }} · sec {{ r.section }}</td>
+        <td class="small">{{ 'Switch section' if r.is_switch else 'New enrollment' }}</td>
+        <td><span class="badge {{ {'Pending':'bg-warning','Accepted':'bg-success','Rejected':'bg-danger'}.get(r.status, 'bg-secondary') }}">{{ r.status }}</span></td>
+        <td class="small">{{ r.reason or '—' }}</td><td class="small mono">{{ r.created }}</td></tr>
+    {% else %}<tr><td colspan="6" class="small text-body-secondary">No requests yet. Pick a faculty on the "Choose subject &amp; faculty" page.</td></tr>{% endfor %}
+  </tbody></table></div>
+</section>
+
+<section id="notes" class="card p-3 mb-4">
+  <h5><i class="bi bi-folder2-open"></i> Notes from faculty</h5>
+  <p class="small text-body-secondary">Get an AI summary of any note, then take a 5-question AI quiz on it. Quiz scores go only to your faculty (+20 XP for taking one).</p>
+  <div class="row g-2">
+  {% for n in notes %}
+    <div class="col-md-6"><div class="border rounded p-2 h-100">
+      <div class="d-flex justify-content-between align-items-start gap-2">
+        <span><i class="bi bi-file-earmark-text text-danger"></i> <b>{{ n.code }}</b> {{ n.title }}</span>
+        {% if n.quiz_done %}<span class="badge bg-success">Quiz done</span>{% endif %}
+      </div>
+      {% if n.has_content %}
+        <div class="mt-1 d-flex gap-2">
+          <button class="btn btn-sm btn-outline-primary" onclick="summarize('note', {{ n.id }}, this)"><i class="bi bi-stars"></i> AI summary</button>
+          {% if not n.quiz_done %}<a class="btn btn-sm btn-primary" href="{{ url_for('student_quiz', note_id=n.id) }}" onclick="this.innerHTML='Preparing quiz…'"><i class="bi bi-patch-question"></i> Take AI quiz</a>{% endif %}
+        </div>
+        <div class="ai-summary {{ '' if n.summary else 'd-none' }}" id="sum-note-{{ n.id }}">{{ n.summary or '' }}</div>
+      {% endif %}
+    </div></div>
+  {% else %}<p class="small text-body-secondary">No notes shared yet.</p>{% endfor %}
+  </div>
+</section>
+
+<div class="row g-3">
+  <div class="col-lg-6">
+    <section id="leave" class="card p-3 mb-4">
+      <h5><i class="bi bi-envelope-paper"></i> Leave / OD request</h5>
+      <form method="post" action="{{ url_for('student_leave') }}" class="row g-2 mb-3">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <div class="col-6"><input type="date" name="from_date" class="form-control" required></div>
+        <div class="col-6"><input type="date" name="to_date" class="form-control" required></div>
+        <div class="col-12"><input name="reason" class="form-control" placeholder="Reason" required></div>
+        <div class="col-12"><button class="btn btn-primary btn-sm">Submit request</button></div>
+      </form>
+      {% for l in leaves %}
+        <div class="small d-flex justify-content-between border-bottom py-1"><span>{{ l.from_date }} → {{ l.to_date }} · {{ l.reason }}</span>
+          <span class="badge {{ {'Approved':'bg-success','Rejected':'bg-danger'}.get(l.status, 'bg-secondary') }}">{{ l.status }}</span></div>
+      {% endfor %}
+    </section>
+  </div>
+  <div class="col-lg-6">
+    <section id="career" class="card p-3 mb-4">
+      <h5><i class="bi bi-briefcase"></i> Placements &amp; referrals</h5>
+      {% for j in jobs %}
+        <div class="border rounded p-2 mb-2">
+          <div class="d-flex justify-content-between"><b>{{ j.title }} · {{ j.company }}</b><span class="badge bg-info-subtle text-info-emphasis">{{ j.kind }}</span></div>
+          <div class="small text-body-secondary">{{ j.description }} · Min CGPA {{ j.min_cgpa }}</div>
+          {% if j.applied %}<span class="badge bg-success mt-1">{{ j.applied }}</span>
+          {% elif u.cgpa >= j.min_cgpa %}
+            <form method="post" action="{{ url_for('student_apply', job_id=j.id) }}" class="mt-1">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="btn btn-sm btn-outline-primary">Apply</button></form>
+          {% else %}<span class="badge bg-secondary mt-1">Not eligible</span>{% endif %}
+        </div>
+      {% else %}<p class="small text-body-secondary mb-0">No openings yet.</p>{% endfor %}
+    </section>
+  </div>
+  <div class="col-lg-6">
+    <section id="grievance" class="card p-3 mb-4">
+      <h5><i class="bi bi-incognito"></i> Anonymous grievance</h5>
+      <p class="small text-body-secondary">For sensitive issues (ragging, harassment). Unlike complaints, your name is never stored.</p>
+      <form method="post" action="{{ url_for('student_grievance') }}" class="mb-2">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <select name="category" class="form-select form-select-sm mb-2">
+          <option>Academics</option><option>Ragging / Safety</option><option>Harassment</option><option>Other</option></select>
+        <textarea name="message" class="form-control form-control-sm mb-2" rows="2" required></textarea>
+        <button class="btn btn-sm btn-dark">Submit anonymously</button>
+      </form>
+      <form method="post" action="{{ url_for('student_track') }}" class="input-group input-group-sm">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <input name="token" class="form-control" placeholder="Tracking token e.g. GRV-1A2B3C" required>
+        <button class="btn btn-outline-secondary">Track</button>
+      </form>
+    </section>
+    <section id="profile" class="card p-3 mb-4">
+      <h5><i class="bi bi-whatsapp text-success"></i> Parent's WhatsApp</h5>
+      <p class="small text-body-secondary">Your weekly performance report (PDF) is sent here every week.</p>
+      <form method="post" action="{{ url_for('student_profile') }}" class="input-group">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <input name="parent_phone" class="form-control" value="{{ u.parent_phone or '' }}" placeholder="919876543210" required>
+        <button class="btn btn-success">Save</button>
+      </form>
+    </section>
+  </div>
+  <div class="col-lg-6">
+    <section id="idcard" class="card mb-4 id-card">
+      <div class="brand-grad p-3"><b><i class="bi bi-mortarboard-fill"></i> CampusVerse College</b><div class="small">Student Identity Card</div></div>
+      <div class="p-3 d-flex gap-3 align-items-center">
+        <div id="qr"></div>
+        <div class="small"><div class="fw-bold fs-6">{{ u.name }}</div>Roll: {{ u.roll }}<br>Dept: {{ u.dept }} · Year {{ u.year }}<br>Blood: {{ u.blood_group }}</div>
+      </div>
+    </section>
+    <section id="calc" class="card p-3 mb-4">
+      <h5><i class="bi bi-calculator"></i> What do I need to score?</h5>
+      <div class="row g-2 small">
+        <div class="col-4"><label>Internal (of 40)</label><input id="ci" type="number" class="form-control form-control-sm" value="30"></div>
+        <div class="col-4"><label>Target total %</label><input id="ct" type="number" class="form-control form-control-sm" value="75"></div>
+        <div class="col-4"><label>External max</label><input id="cm" type="number" class="form-control form-control-sm" value="60"></div>
+      </div>
+      <div id="cr" class="mt-2 fw-semibold"></div>
+    </section>
+  </div>
+</div>
+{% include "_notices.html" %}
+{% endblock %}
+{% block scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+  const CSRF = "{{ csrf_token }}";
+  const STEPS = {{ OPS_STEPS|tojson }};
+  const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const post = (url, body) => fetch(url, { method: "POST", headers: { "Content-Type": "application/json", "X-CSRF-Token": CSRF },
+                                           body: JSON.stringify(body || {}) }).then(async r => ({ ok: r.ok, ...(await r.json()) }));
+
+  /* ---------- AI chat ---------- */
+  const box = document.getElementById("chatBox");
+  function addMsg(role, text) {
+    const d = document.createElement("div");
+    d.className = "msg " + role; d.textContent = text; box.appendChild(d); box.scrollTop = box.scrollHeight; return d;
+  }
+  box.scrollTop = box.scrollHeight;
+  async function ask(text) {
+    text = text.trim(); if (!text) return;
+    chatInput.value = ""; sendBtn.disabled = true;
+    addMsg("user", text);
+    const wait = addMsg("assistant", "Thinking…");
+    try {
+      const r = await post("{{ url_for('student_ai') }}", { message: text });
+      wait.textContent = r.ok ? r.reply : "⚠️ " + r.error;
+      if (r.tickets && r.tickets.length) loadTickets();
+    } catch (e) { wait.textContent = "⚠️ Network error. Please try again."; }
+    sendBtn.disabled = false; chatInput.focus();
+  }
+  async function clearChat() {
+    await post("{{ url_for('student_ai_clear') }}");
+    [...box.querySelectorAll(".msg")].slice(1).forEach(m => m.remove());
+  }
+
+  /* ---------- AI summaries ---------- */
+  async function summarize(kind, id, btn) {
+    const out = document.getElementById(`sum-${kind}-${id}`);
+    if (out.textContent.trim()) { out.classList.toggle("d-none"); return; }
+    const label = btn.innerHTML; btn.disabled = true; btn.innerHTML = "Summarizing…";
+    const r = await post(`/student/summary/${kind}/${id}`);
+    out.textContent = r.ok ? r.summary : "⚠️ " + r.error; out.classList.remove("d-none");
+    btn.disabled = false; btn.innerHTML = label;
+  }
+
+  /* ---------- live complaint tracking ---------- */
+  let lastTickets = "";
+  async function loadTickets() {
+    const r = await fetch("{{ url_for('ops.my_tickets') }}").then(r => r.json()).catch(() => null);
+    if (!r) return;
+    const json = JSON.stringify(r.tickets);
+    if (json === lastTickets) return;  // nothing changed
+    const changed = lastTickets !== "";
+    lastTickets = json;
+    const PCLS = { P1: "bg-danger", P2: "bg-warning text-dark", P3: "bg-info text-dark", P4: "bg-secondary" };
+    ticketList.innerHTML = r.tickets.map(t => `
+      <div class="border rounded p-2 mb-2 ${t.status === "Needs Info" ? "border-warning" : ""}">
+        <div class="d-flex justify-content-between gap-2"><b>${esc(t.ref)} ${esc(t.title)}</b>
+          <span><span class="badge ${PCLS[t.priority]}">${t.priority}</span>
+          <span class="badge ${["Resolved","Closed"].includes(t.status) ? "bg-success" : t.status === "Blocked" ? "bg-danger" : "bg-warning text-dark"}">${esc(t.status)}</span></span></div>
+        <div class="small text-body-secondary">${esc(t.category)} · ${esc(t.room_code || t.location_text || "location needed")}${t.tech_name ? " · 👷 " + esc(t.tech_name) : ""}
+          ${t.report_count > 1 ? ` · 👥 ${t.report_count} people reported this` : ""}${t.source === "AI chat" ? " · via AI 🤖" : ""}</div>
+        ${t.severity_reason ? `<div class="small">Severity ${t.severity}/5: ${esc(t.severity_reason)}</div>` : ""}
+        ${t.blocked_reason ? `<div class="small text-danger">⏳ ${esc(t.blocked_reason)}</div>` : ""}
+        ${t.status === "Needs Info" ? `<form method="post" action="/ops/clarify/${t.id}" class="input-group input-group-sm my-2">
+            <input type="hidden" name="csrf_token" value="${CSRF}"><input name="details" class="form-control" placeholder="${esc(t.clarification || "Add the location")}" required>
+            <button class="btn btn-warning">Send</button></form>` : ""}
+        <div class="steps my-2">${STEPS.map((s, i) => `<div class="${i <= t.step ? "on" : ""}" title="${s}"></div>`).join("")}</div>
+        <div class="timeline small">${t.updates.slice().reverse().map(u => `<div class="mb-1"><b>${esc(u.status)}</b> — ${esc(u.message)}
+          <div class="text-body-secondary" style="font-size:.75rem">${esc(u.at)} · ${esc(u.by)}</div></div>`).join("")}</div>
+      </div>`).join("") || `<p class="small text-body-secondary">No reports yet. Tell the AI assistant about any issue.</p>`;
+    if (changed) ticketList.firstElementChild?.classList.add("border-success");
+  }
+  loadTickets(); setInterval(loadTickets, 5000);
+
+  /* ---------- widgets ---------- */
+  new QRCode(document.getElementById('qr'), { text: 'CAMPUSVERSE:{{ u.roll }}', width: 96, height: 96 });
+  new Chart(document.getElementById('sgpaChart'), {
+    type: 'line',
+    data: { labels: {{ semesters|map(attribute='sem')|map('string')|list|tojson }}.map(s => 'Sem ' + s),
+            datasets: [{ label: 'SGPA', data: {{ semesters|map(attribute='sgpa')|list|tojson }}, borderColor: '#00f0ff', tension: .3, fill: false }] },
+    options: { plugins: { legend: { display: false } }, scales: { y: { min: 4, max: 10 } } }
+  });
+  document.querySelectorAll('.countdown').forEach(el => {
+    const days = Math.ceil((new Date(el.dataset.due) - new Date()) / 864e5);
+    el.textContent = days <= 0 ? 'Due today' : days + ' day' + (days > 1 ? 's' : '') + ' left';
+  });
+  function calc() {
+    const i = +ci.value, t = +ct.value, m = +cm.value, need = Math.ceil(t / 100 * (40 + m) - i);
+    cr.textContent = need > m ? `Not reachable — max possible is ${Math.round((i + m) / (40 + m) * 100)}%`
+                   : `You need ${Math.max(0, need)} / ${m} in the final exam.`;
+  }
+  [ci, ct, cm].forEach(e => e.addEventListener('input', calc)); calc();
+</script>
+{% endblock %}

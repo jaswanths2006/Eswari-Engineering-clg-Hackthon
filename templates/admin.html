@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+{% block title %} · Admin{% endblock %}
+{% block nav %}
+  <li><a class="nav-link" href="#pulse"><i class="bi bi-activity"></i> Campus pulse</a></li>
+  <li><a class="nav-link" href="#tickets"><i class="bi bi-tools"></i> CampusOps <span class="badge bg-danger" id="openBadge">{{ stats.tickets_open }}</span></a></li>
+  <li><a class="nav-link" href="#reports"><i class="bi bi-whatsapp"></i> Weekly reports</a></li>
+  <li><a class="nav-link" href="#users"><i class="bi bi-people"></i> Users</a></li>
+  <li><a class="nav-link" href="#notice"><i class="bi bi-megaphone"></i> Publish notice</a></li>
+  <li><a class="nav-link" href="#grievances"><i class="bi bi-incognito"></i> Grievances</a></li>
+{% endblock %}
+{% block content %}
+<div id="newTicketAlert" class="alert alert-warning d-none">🔔 A new complaint just came in. <a href="{{ url_for('admin_dashboard') }}#tickets">Refresh to see it</a>.</div>
+<section id="pulse" class="row g-3 mb-4">
+  <div class="col-6 col-xl-3"><div class="card p-3 stat"><div class="small text-body-secondary">Overall attendance</div><div class="val">{{ stats.attendance }}%</div></div></div>
+  <div class="col-6 col-xl-3"><div class="card p-3 stat"><div class="small text-body-secondary">Fees collected</div><div class="val text-success">₹{{ "{:,}".format(stats.fees_collected) }}</div></div></div>
+  <div class="col-6 col-xl-3"><div class="card p-3 stat"><div class="small text-body-secondary">Fees pending</div><div class="val text-danger">₹{{ "{:,}".format(stats.fees_pending) }}</div></div></div>
+  <div class="col-6 col-xl-3"><div class="card p-3 stat"><div class="small text-body-secondary">Open work orders</div><div class="val">{{ stats.tickets_open }}</div></div></div>
+  <div class="col-lg-6"><div class="card p-3"><h6>Users by role</h6><canvas id="roleChart" height="180"></canvas></div></div>
+  <div class="col-lg-6"><div class="card p-3"><h6>Attendance by department</h6><canvas id="deptChart" height="180"></canvas></div></div>
+</section>
+
+{% import "_ops.html" as ops with context %}
+<section id="tickets" class="card p-3 mb-4">
+  <div class="d-flex justify-content-between align-items-center">
+    <h5 class="mb-0"><i class="bi bi-tools"></i> CampusOps: top of the priority queue</h5>
+    <a class="btn btn-sm btn-primary" href="{{ url_for('ops.center') }}"><i class="bi bi-grid-1x2"></i> Open Operations Center</a>
+  </div>
+  <p class="small text-body-secondary">Fully automated: AI triage, duplicate merging, priority, assignment, SLA escalation and room relocation run without manual steps. Use the Operations Center to override.</p>
+  <div class="d-flex flex-wrap gap-2 mb-2 small">
+    <span class="badge bg-light text-dark border">Open: {{ ops_stats.open }}</span>
+    <span class="badge bg-danger">P1: {{ ops_stats.by_priority.P1 }}</span>
+    <span class="badge bg-warning text-dark">P2: {{ ops_stats.by_priority.P2 }}</span>
+    <span class="badge bg-success">SLA compliance: {{ ops_stats.sla_compliance if ops_stats.sla_compliance is not none else '—' }}%</span>
+    <span class="badge bg-dark">Breached: {{ ops_stats.breached_open }}</span>
+  </div>
+  {{ ops.queue_table(queue) }}
+</section>
+
+<section id="reports" class="card p-3 mb-4">
+  <h5><i class="bi bi-whatsapp text-success"></i> Weekly performance reports</h5>
+  <p class="small text-body-secondary mb-2">Every 7 days a PDF report for each student is sent automatically to the parent's WhatsApp number.
+    Last run: <b>{{ last_sent }}</b>.
+    {% if whatsapp_ready %}<span class="badge bg-success">WhatsApp connected</span>
+    {% else %}<span class="badge bg-warning text-dark">WhatsApp not configured: PDFs are only saved</span>{% endif %}</p>
+  <div class="d-flex flex-wrap gap-2 mb-2">
+    <form method="post" action="{{ url_for('admin_send_reports') }}" onsubmit="this.querySelector('button').innerHTML='Sending…'">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="btn btn-success btn-sm"><i class="bi bi-send"></i> Send this week's reports now</button></form>
+    {% for x in users if x.role == 'student' %}
+      <a class="btn btn-outline-secondary btn-sm" target="_blank" href="{{ url_for('admin_report_pdf', roll=x.username) }}"><i class="bi bi-file-earmark-pdf"></i> Preview {{ x.username }}</a>
+    {% endfor %}
+  </div>
+  {% if report_log %}
+  <div class="table-responsive"><table class="table table-sm mb-0"><thead><tr><th>Student</th><th>When</th><th>Status</th><th>Detail</th></tr></thead><tbody>
+    {% for r in report_log %}<tr><td>{{ r.roll }} {{ r.name }}</td><td class="small">{{ r.sent_at }}</td>
+      <td><span class="badge {{ 'bg-success' if r.status == 'Sent' else 'bg-secondary' }}">{{ r.status }}</span></td><td class="small">{{ r.detail }}</td></tr>{% endfor %}
+  </tbody></table></div>
+  {% endif %}
+</section>
+
+<div class="row g-3">
+  <div class="col-lg-7">
+    <section id="users" class="card p-3 mb-4">
+      <h5><i class="bi bi-people"></i> Users</h5>
+      <div class="table-responsive" style="max-height:320px"><table class="table table-sm">
+        <thead><tr><th>Login ID</th><th>Name</th><th>Role</th><th>Dept</th><th>Parent WhatsApp</th></tr></thead><tbody>
+        {% for x in users %}<tr><td>{{ x.username }}</td><td>{{ x.name }}</td><td><span class="badge bg-secondary">{{ x.role }}</span></td>
+          <td>{{ x.dept or '—' }}</td><td class="small">{{ x.parent_phone or '—' }}</td></tr>{% endfor %}
+      </tbody></table></div>
+      <h6 class="mt-2">Add user</h6>
+      <form method="post" action="{{ url_for('admin_add_user') }}" class="row g-2">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <div class="col-md-4"><input name="username" class="form-control form-control-sm" placeholder="Login ID" required></div>
+        <div class="col-md-4"><input name="name" class="form-control form-control-sm" placeholder="Full name" required></div>
+        <div class="col-md-4"><input name="password" type="password" class="form-control form-control-sm" placeholder="Password" required minlength="6"></div>
+        <div class="col-md-3"><select name="role" class="form-select form-select-sm">{% for r in roles %}<option value="{{ r }}">{{ ROLE_LABELS[r] }}</option>{% endfor %}</select></div>
+        <div class="col-md-3"><input name="dept" class="form-control form-control-sm" placeholder="Dept (CSE…)"></div>
+        <div class="col-md-3"><input name="parent_phone" class="form-control form-control-sm" placeholder="Parent WhatsApp (students)"></div>
+        <div class="col-md-3"><button class="btn btn-primary btn-sm w-100">Create</button></div>
+      </form>
+    </section>
+  </div>
+  <div class="col-lg-5">
+    <section id="notice" class="card p-3 mb-4">
+      <h5><i class="bi bi-megaphone"></i> Publish notice</h5>
+      <form method="post" action="{{ url_for('admin_notice') }}" class="vstack gap-2">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <input name="title" class="form-control form-control-sm" placeholder="Title" required>
+        <textarea name="body" class="form-control form-control-sm" rows="2" placeholder="Message" required></textarea>
+        <select name="target" class="form-select form-select-sm"><option value="all">Everyone</option>{% for r in roles %}<option value="{{ r }}">{{ ROLE_LABELS[r] }} only</option>{% endfor %}</select>
+        <button class="btn btn-primary btn-sm">Publish</button>
+      </form>
+    </section>
+    <section id="grievances" class="card p-3 mb-4">
+      <h5><i class="bi bi-incognito"></i> Anonymous grievances</h5>
+      {% for gr in grievances %}
+        <div class="border-bottom py-2 small">
+          <b>{{ gr.token }}</b> · {{ gr.category }}<br>{{ gr.message }}
+          <form method="post" action="{{ url_for('admin_grievance', gid=gr.id) }}" class="input-group input-group-sm mt-1">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <select name="status" class="form-select">{% for s in ['Open','In Progress','Resolved'] %}<option {{ 'selected' if s == gr.status }}>{{ s }}</option>{% endfor %}</select>
+            <button class="btn btn-outline-primary">Update</button>
+          </form>
+        </div>
+      {% else %}<p class="small text-body-secondary mb-0">No grievances.</p>{% endfor %}
+    </section>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+  new Chart(roleChart, { type: 'doughnut',
+    data: { labels: {{ counts.keys()|list|tojson }}, datasets: [{ data: {{ counts.values()|list|tojson }} }] } });
+  new Chart(deptChart, { type: 'bar',
+    data: { labels: {{ dept_att|map(attribute='dept')|list|tojson }},
+            datasets: [{ label: 'Attendance %', data: {{ dept_att|map(attribute='pct')|list|tojson }}, backgroundColor: '#00f0ff' }] },
+    options: { plugins: { legend: { display: false } }, scales: { y: { min: 0, max: 100 } } } });
+  // Live: watch for new complaints
+  const latestSeen = {{ latest_id }};
+  setInterval(async () => {
+    const r = await fetch("{{ url_for('admin_tickets_json') }}").then(r => r.json()).catch(() => null);
+    if (!r) return;
+    openBadge.textContent = r.open;
+    if (r.latest > latestSeen) newTicketAlert.classList.remove('d-none');
+  }, 5000);
+</script>
+{% endblock %}

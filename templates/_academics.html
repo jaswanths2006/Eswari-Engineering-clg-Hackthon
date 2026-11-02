@@ -1,0 +1,49 @@
+{# Shared by student and parent dashboards: attendance with risk alerts, marks, fees. #}
+<section id="attendance" class="card p-3 mb-4">
+  <h5><i class="bi bi-calendar-check"></i> Attendance <span class="badge {{ 'bg-success' if overall >= 75 else 'bg-danger' }}">{{ overall }}%</span></h5>
+  <div class="table-responsive"><table class="table align-middle mb-0">
+    <thead><tr><th>Subject</th><th>Attended</th><th style="width:35%">%</th><th>Risk alert</th></tr></thead>
+    <tbody>
+    {% for a in att %}
+      <tr>
+        <td><b>{{ a.code }}</b> <span class="small text-body-secondary">{{ a.name }}</span></td>
+        <td>{{ a.present }}/{{ a.total }}</td>
+        <td><div class="progress" role="progressbar"><div class="progress-bar {{ 'bg-success' if a.pct >= 75 else 'bg-danger' }}" style="width: {{ a.pct }}%">{{ a.pct }}%</div></div></td>
+        <td>{% if a.need %}<span class="text-danger small"><i class="bi bi-exclamation-triangle"></i> Attend next {{ a.need }} classes to reach 75%</span>
+            {% else %}<span class="text-success small"><i class="bi bi-check-circle"></i> Safe</span>{% endif %}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+</section>
+
+<section id="marks" class="card p-3 mb-4">
+  <h5><i class="bi bi-bar-chart"></i> Marks</h5>
+  <div class="table-responsive"><table class="table table-sm mb-0">
+    <thead><tr><th>Subject</th><th>Exam</th><th>Score</th><th>%</th></tr></thead>
+    <tbody>
+    {% for m in marks %}
+      {% set p = (m.score / m.max_score * 100)|round(1) %}
+      <tr><td>{{ m.code }}</td><td>{{ m.exam }}</td><td>{{ m.score|int }}/{{ m.max_score|int }}</td>
+          <td class="{{ 'text-danger' if p < 50 else '' }}">{{ p }}%</td></tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+</section>
+
+<section id="fees" class="card p-3 mb-4">
+  <h5><i class="bi bi-wallet2"></i> Fees <span class="badge bg-warning-subtle text-warning-emphasis">Pending ₹{{ "{:,}".format(fee_pending) }}</span></h5>
+  <table class="table align-middle mb-0">
+    <thead><tr><th>Term</th><th>Amount</th><th>Due</th><th>Status</th></tr></thead>
+    <tbody>
+    {% for f in fees %}
+      <tr><td>{{ f.term }}</td><td>₹{{ "{:,}".format(f.amount) }}</td><td>{{ f.due_date }}</td>
+        <td>{% if f.paid %}<span class="badge bg-success">Paid</span>
+            {% elif u.role == 'student' %}<form method="post" action="{{ url_for('student_pay', fee_id=f.id) }}" class="d-inline">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+              <button class="btn btn-sm btn-primary">Pay now (demo)</button></form>
+            {% else %}<span class="badge bg-danger">Unpaid</span>{% endif %}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</section>

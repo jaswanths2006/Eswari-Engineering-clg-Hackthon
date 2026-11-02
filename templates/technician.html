@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% import "_ops.html" as ops with context %}
+{% block title %} · Technician{% endblock %}
+{% block nav %}
+  <li><a class="nav-link" href="#jobs"><i class="bi bi-tools"></i> My work orders</a></li>
+  <li><a class="nav-link" href="#done"><i class="bi bi-check2-all"></i> Completed</a></li>
+  <li><a class="nav-link" href="#stock"><i class="bi bi-box-seam"></i> Parts stock</a></li>
+{% endblock %}
+{% block content %}
+<div class="row g-3 mb-4">
+  <div class="col-6 col-lg-3"><div class="card p-3 stat"><div class="small text-body-secondary">Shift</div>
+    <div class="val">{{ '%02d'|format(u.shift[0]) }}–{{ '%02d'|format(u.shift[1]) }}</div>
+    <span class="badge {{ 'bg-success' if on_shift else 'bg-secondary' }}">{{ 'On shift now' if on_shift else 'Off shift' }}</span></div></div>
+  <div class="col-6 col-lg-3"><div class="card p-3 stat"><div class="small text-body-secondary">Skills</div><div class="fw-semibold mt-2">{{ u.skills|join(', ') }}</div></div></div>
+  <div class="col-6 col-lg-3"><div class="card p-3 stat"><div class="small text-body-secondary">Workload</div><div class="val">{{ load }}/{{ capacity }}</div></div></div>
+  <div class="col-6 col-lg-3"><div class="card p-3 stat"><div class="small text-body-secondary">Availability</div>
+    <form method="post" action="{{ url_for('ops.tech_availability', tech_id=u.id) }}" class="mt-2"><input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <input type="hidden" name="available" value="{{ '0' if u.available else '1' }}">
+      <button class="btn btn-sm {{ 'btn-outline-danger' if u.available else 'btn-success' }}" {% if u.available %}onclick="return confirm('Your open jobs will be reassigned to other technicians. Continue?')"{% endif %}>
+        {{ "I'm unavailable (sick/leave)" if u.available else "I'm back — available" }}</button></form></div></div>
+</div>
+
+<section id="jobs" class="card p-3 mb-4">
+  <h5><i class="bi bi-tools"></i> My work orders <span class="badge bg-secondary">{{ mine|length }}</span></h5>
+  <p class="small text-body-secondary">Highest priority first. Reserve parts before starting; if a part is out of stock the job is blocked automatically and procurement is asked. Repairs above ₹10,000 need manager approval.</p>
+  {% for t in mine %}
+    <div class="border rounded p-3 mb-3 {{ 'border-danger' if t.priority == 'P1' }}">
+      <div class="d-flex justify-content-between flex-wrap gap-2">
+        <div><b>{{ t.ref }}</b> {{ ops.pbadge(t.priority) }} {{ ops.sbadge(t.status) }} {{ ops.slabadge(t) }}</div>
+        <div class="small text-body-secondary">Reported {{ t.created }} via {{ t.source }}{% if t.report_count > 1 %} · {{ t.report_count }} reports{% endif %}</div>
+      </div>
+      <div class="fw-semibold mt-1">{{ t.title }} — <i class="bi bi-geo-alt"></i> {{ t.room_code }} {{ t.location_text }}</div>
+      <div class="small">{{ t.ai_summary }}</div>
+      {% if t.assets %}<div class="small">Equipment: {{ t.assets|join(', ') }}</div>{% endif %}
+      {% if t.blocked_reason %}<div class="small text-danger"><i class="bi bi-slash-circle"></i> {{ t.blocked_reason }}</div>{% endif %}
+      {% if t.parts %}<div class="small">{% for p in t.parts %}<span class="badge {{ 'bg-success' if p.status in ['Reserved','Used'] else 'bg-danger' }}">{{ p.qty }}× {{ p.name }}: {{ p.status }}</span> {% endfor %}</div>{% endif %}
+      {% if history[t.id] %}<div class="small text-body-secondary mt-1">Room history: {% for h in history[t.id] %}{{ h.date }} {{ h.title }}{{ '; ' if not loop.last }}{% endfor %}</div>{% endif %}
+      <div class="mt-2">{{ ops.actions(t, None, inventory) }}</div>
+    </div>
+  {% else %}<p class="text-body-secondary small mb-0">No open work orders. 🎉</p>{% endfor %}
+</section>
+
+<section id="done" class="card p-3 mb-4">
+  <h5><i class="bi bi-check2-all"></i> Recently completed</h5>
+  {{ ops.queue_table(done, compact=True) }}
+</section>
+<section id="stock" class="card p-3 mb-4">
+  <h5><i class="bi bi-box-seam"></i> Parts stock</h5>
+  {{ ops.inventory_table(inventory) }}
+</section>
+{% endblock %}

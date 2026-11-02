@@ -1,0 +1,50 @@
+{# Room booking with live double-booking check and alternative suggestions. Needs `rooms` in context. #}
+<form method="post" action="{{ url_for('ops.booking') }}" id="bookForm" class="vstack gap-2">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  <input name="title" class="form-control form-control-sm" placeholder="Purpose, e.g. Extra class: CS301" required>
+  <div class="d-flex gap-2">
+    <select name="room_id" class="form-select form-select-sm" required>{% for r in rooms if r.type in ['classroom','lab','seminar','exam_hall'] %}<option value="{{ r.id }}">{{ r.code }} · {{ r.name }} ({{ r.capacity }}){{ ' — maintenance' if r.status == 'maintenance' }}</option>{% endfor %}</select>
+    <select name="kind" class="form-select form-select-sm" style="max-width:110px"><option value="class">Class</option><option value="event">Event</option><option value="exam">Exam</option></select>
+  </div>
+  <div class="d-flex gap-2">
+    <input name="date" type="date" class="form-control form-control-sm" required value="{{ today if today is defined else '' }}">
+    <input name="start" type="time" class="form-control form-control-sm" value="16:00" required>
+    <input name="end" type="time" class="form-control form-control-sm" value="17:00" required>
+    <input name="attendees" type="number" min="1" class="form-control form-control-sm" placeholder="People" style="max-width:80px">
+  </div>
+  <div id="bookCheck" class="small"></div>
+  <div class="d-flex gap-2">
+    <button class="btn btn-sm btn-primary">Book</button>
+    <button type="button" class="btn btn-sm btn-outline-warning d-none" id="overrideBtn" onclick="requestOverride()">Request override</button>
+  </div>
+</form>
+<form method="post" action="{{ url_for('ops.booking_override') }}" id="overrideForm" class="d-none">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  {% for f in ['room_id','date','start','end','title','kind','attendees'] %}<input type="hidden" name="{{ f }}">{% endfor %}
+  <input type="hidden" name="reason" value="Requested this specific room">
+</form>
+<script>
+(() => {
+  const f = document.getElementById('bookForm'), out = document.getElementById('bookCheck');
+  async function check() {
+    if (!f.date.value || !f.start.value || !f.end.value) return;
+    const r = await fetch('{{ url_for("ops.booking_check") }}', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': '{{ csrf_token }}' },
+      body: JSON.stringify({ room_id: f.room_id.value, date: f.date.value, start: f.start.value, end: f.end.value, attendees: f.attendees.value }) }).then(r => r.json()).catch(() => null);
+    if (!r) return;
+    const ov = document.getElementById('overrideBtn');
+    if (r.available) { out.innerHTML = '<span class="text-success"><i class="bi bi-check-circle"></i> Room is free.</span>'; ov.classList.add('d-none'); return; }
+    out.innerHTML = '<span class="text-danger"><i class="bi bi-x-circle"></i> ' + (r.status === 'maintenance' ? 'Room under maintenance.' :
+      'Double booking with: ' + r.conflicts.map(c => `${c.title} ${c.start}-${c.end}`).join(', ')) + '</span>' +
+      (r.alternatives.length ? '<div>Free alternatives: ' + r.alternatives.map(a => `<a href="#" onclick="pickRoom(${a.id});return false">${a.code} (${a.capacity})</a>`).join(', ') + '</div>' : '<div>No free alternative.</div>');
+    ov.classList.toggle('d-none', r.status === 'maintenance');
+  }
+  window.pickRoom = id => { f.room_id.value = id; check(); };
+  window.requestOverride = () => {
+    const o = document.getElementById('overrideForm');
+    ['room_id','date','start','end','title','kind','attendees'].forEach(k => o[k].value = f[k].value);
+    if (!f.title.value) { alert('Enter a purpose first.'); return; }
+    o.submit();
+  };
+  f.addEventListener('change', check);
+})();
+</script>

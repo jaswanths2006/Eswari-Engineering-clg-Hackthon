@@ -1,0 +1,9 @@
+<section id="notices" class="card p-3 mb-4">
+  <h5><i class="bi bi-megaphone"></i> Notices</h5>
+  {% for n in notices %}
+    <div class="border-start border-3 border-primary ps-2 mb-2">
+      <div class="fw-semibold">{{ n.title }}</div>
+      <div class="small text-body-secondary">{{ n.body }} · {{ n.created }}</div>
+    </div>
+  {% else %}<p class="text-body-secondary small mb-0">No notices.</p>{% endfor %}
+</section>

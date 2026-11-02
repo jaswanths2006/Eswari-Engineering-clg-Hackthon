@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %} · Recruiter{% endblock %}
+{% block nav %}
+  <li><a class="nav-link" href="#search"><i class="bi bi-search"></i> Find candidates</a></li>
+  <li><a class="nav-link" href="#applicants"><i class="bi bi-person-check"></i> Applicants</a></li>
+  <li><a class="nav-link" href="#post"><i class="bi bi-plus-circle"></i> Post drive</a></li>
+  <li><a class="nav-link" href="#notices"><i class="bi bi-megaphone"></i> Notices</a></li>
+{% endblock %}
+{% block content %}
+<section id="search" class="card p-3 mb-4">
+  <h5><i class="bi bi-search"></i> Find candidates</h5>
+  <form class="row g-2 mb-2">
+    <div class="col-md-4"><input name="min_cgpa" type="number" step="0.1" value="{{ min_cgpa }}" class="form-control form-control-sm" placeholder="Min CGPA"></div>
+    <div class="col-md-4"><select name="dept" class="form-select form-select-sm"><option value="">All departments</option>
+      {% for d in depts %}<option {{ 'selected' if d == dept }}>{{ d }}</option>{% endfor %}</select></div>
+    <div class="col-md-4"><button class="btn btn-primary btn-sm w-100">Filter</button></div>
+  </form>
+  <table class="table table-sm mb-0"><thead><tr><th>Roll</th><th>Name</th><th>Dept</th><th>CGPA</th><th>XP</th></tr></thead><tbody>
+    {% for c in candidates %}<tr><td>{{ c.roll }}</td><td>{{ c.name }}</td><td>{{ c.dept }}</td><td>{{ c.cgpa }}</td><td>{{ c.xp }}</td></tr>
+    {% else %}<tr><td colspan="5">No students match.</td></tr>{% endfor %}
+  </tbody></table>
+</section>
+
+<section id="applicants" class="card p-3 mb-4">
+  <h5><i class="bi bi-person-check"></i> Applicants to my drives</h5>
+  {% for a in applicants %}
+    <div class="d-flex justify-content-between align-items-center border-bottom py-2 small">
+      <span><b>{{ a.title }}</b> — {{ a.roll }} {{ a.name }} (CGPA {{ a.cgpa }})</span>
+      <form method="post" action="{{ url_for('recruiter_application', aid=a.id) }}" class="input-group input-group-sm w-auto">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <select name="status" class="form-select">{% for s in ['Applied','Shortlisted','Interview','Selected','Rejected'] %}<option {{ 'selected' if s == a.status }}>{{ s }}</option>{% endfor %}</select>
+        <button class="btn btn-outline-primary">Save</button>
+      </form>
+    </div>
+  {% else %}<p class="small text-body-secondary mb-0">No applications yet.</p>{% endfor %}
+</section>
+
+{% set heading = "Post a placement drive" %}
+{% include "_job_form.html" %}
+{% include "_notices.html" %}
+{% endblock %}

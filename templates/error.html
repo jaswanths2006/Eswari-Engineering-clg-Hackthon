@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+{% block public %}
+<div class="container py-5 text-center">
+  <h1 class="display-4">{{ code }}</h1>
+  <p class="lead">{{ msg }}</p>
+  <a class="btn btn-primary" href="{{ url_for('login') }}">Go to login</a>
+</div>
+{% endblock %}
