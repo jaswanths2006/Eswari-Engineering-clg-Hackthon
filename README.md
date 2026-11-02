@@ -74,6 +74,8 @@ The Recruiter login from the portal is also kept (placement drives).
 
 ## 🧪 Demo accounts
 
+Full list with screenshots: **[LOGINS.md](LOGINS.md)**.
+
 | Role | Login ID | Password |
 |---|---|---|
 | System Administrator | `admin` | `admin@123` |
