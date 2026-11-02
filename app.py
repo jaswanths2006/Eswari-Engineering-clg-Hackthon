@@ -19,10 +19,21 @@ import reports  # noqa: E402
 from auth import HOME, ROLE_LABELS, ROLES, current_user, role_required, roles_required  # noqa: E402
 
 app = Flask(__name__)
-app.secret_key = os.environ.get("SECRET_KEY", secrets.token_hex(16))
+# Must be the same on every server instance (Vercel runs several), or logins drop at random.
+# Set SECRET_KEY in production; the fallback is derived from the (secret) database URI.
+app.secret_key = os.environ.get("SECRET_KEY") or __import__("hashlib").sha256(
+    ("campusverse:" + os.environ.get("MONGODB_URI", "local-dev")).encode()).hexdigest()
 app.config["MAX_CONTENT_LENGTH"] = 5 * 1024 * 1024  # note uploads
 app.register_blueprint(ops.bp)
 app.register_blueprint(academics.bp)
+
+# On Vercel (serverless) there is no `python app.py` startup step, so prepare the database on import:
+# offline mode fills its in-memory copy here; on Atlas, an empty database is seeded once.
+if os.environ.get("VERCEL"):
+    from db import OFFLINE
+    if OFFLINE or count("users") == 0:
+        import seed
+        seed.main()
 
 TICKET_STEPS = ops.STEPS
 

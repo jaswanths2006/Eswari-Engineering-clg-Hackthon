@@ -1,5 +1,7 @@
 # 🎓 CampusVerse + CampusOps — An Intelligent Campus Platform
 
+🌐 **Live demo:** https://eswari-engineering-clg-hackthon.vercel.app/ · 🔑 **Logins:** [LOGINS.md](LOGINS.md)
+
 > **Hackathon PS 2: CampusOps — An Intelligent Campus Operations Platform.**
 > Natural-language maintenance reports from a form, an AI chat or a simulated email become prioritised, deduplicated, auto-assigned work orders. The platform coordinates technicians, rooms, exams, spare parts and approvals, and gives administrators one unified view. It's built on a full college portal (academics, AI study tools, placements, weekly WhatsApp reports to parents).
 
@@ -194,6 +196,14 @@ Open **http://127.0.0.1:5000**. `seed.py` erases and reloads all data, so use it
 6. Log in as `mgr.cse` to approve a costly repair; `mgr.ece` is refused for a CSE job (separation of duties).
 
 ---
+
+## ☁️ Deploying on Vercel
+
+The repo deploys to Vercel automatically on every push to `main` (live at https://eswari-engineering-clg-hackthon.vercel.app/).
+In **Vercel → Project → Settings → Environment Variables**, add the same keys as `.env`:
+`MONGODB_URI`, `MONGODB_DB`, `SECRET_KEY`, `GEMINI_API_KEY`, `GEMINI_MODEL`, `WHATSAPP_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, then redeploy.
+In **MongoDB Atlas → Network Access**, allow `0.0.0.0/0` (Vercel servers have changing IPs).
+Without `MONGODB_URI` the site still opens in offline demo mode, but each server instance keeps its own temporary data.
 
 ## 📲 WhatsApp setup
 

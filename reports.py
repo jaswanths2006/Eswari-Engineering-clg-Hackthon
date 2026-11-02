@@ -6,7 +6,9 @@ from datetime import date, timedelta
 import requests
 from fpdf import FPDF
 
-REPORT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "reports")
+# Vercel's filesystem is read-only except /tmp
+REPORT_DIR = "/tmp/reports" if os.environ.get("VERCEL") else \
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "reports")
 
 
 def build_pdf(student, summary, extras):
